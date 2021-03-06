@@ -42,7 +42,7 @@ world_obj_p[0,:,:2] = np.mgrid[0:CHECKERBOARD[0], 0:CHECKERBOARD[1]].T.reshape(-
 prev_img_shape = None
 
 # Lê o pacote das imagens capturadas com final .jpg num diretório específico
-images = glob.glob('*.jpg')
+images = glob.glob('.\Imagens\*.jpg')
 for fname in images:
     img = cv.imread(fname)
     gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
