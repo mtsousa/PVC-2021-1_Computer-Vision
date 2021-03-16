@@ -15,7 +15,7 @@ MINIMO = np.array([25],np.uint8)
 
 # Captura o video da câmera e define a imagem para o background virtual
 camera = cv.VideoCapture(0)
-virtual_background = cv.imread('') # Inserir o nome da imagem para o background virtual no formato 'nome.jpg'
+virtual_background = cv.imread('marvel_avengers_08.jpg')
 
 # Captura o fundo para a imagem de referência
 while(True): 
