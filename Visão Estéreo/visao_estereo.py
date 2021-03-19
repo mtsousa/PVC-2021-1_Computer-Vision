@@ -4,6 +4,7 @@
 
 import cv2 as cv
 import numpy as np
+import matplotlib.pyplot as plt
 
 imgL = cv.imread('im0.png', cv.COLOR_BGR2GRAY)
 imgR = cv.imread('im1.png', cv.COLOR_BGR2GRAY)
@@ -46,6 +47,9 @@ filteredImg = np.uint8(filteredImg)
 
 # cv.imshow('filtered', filteredImg) Corrigir o tamanho da janela de exibição
 cv.imwrite('filtered.jpg', filteredImg)
-coloredImg = cv.applyColorMap(filteredImg, cv.COLORMAP_JET)
-cv.imwrite('color_filtered.jpg', coloredImg)
+
+# Utiliza matplotlib para criar perfil em pseudocor com barra de cores para a imagem
+plt.imshow(filteredImg, cmap='jet')
+plt.colorbar()
+plt.savefig("color_filtered.jpg")
 cv.waitKey(0)
