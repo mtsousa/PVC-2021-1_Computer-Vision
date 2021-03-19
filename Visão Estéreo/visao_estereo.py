@@ -46,4 +46,6 @@ filteredImg = np.uint8(filteredImg)
 
 # cv.imshow('filtered', filteredImg) Corrigir o tamanho da janela de exibição
 cv.imwrite('filtered.jpg', filteredImg)
+coloredImg = cv.applyColorMap(filteredImg, cv.COLORMAP_JET)
+cv.imwrite('color_filtered.jpg', coloredImg)
 cv.waitKey(0)
