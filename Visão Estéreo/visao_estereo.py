@@ -5,7 +5,27 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
+import re
 
+def data_reader(file_name):
+# Função para leitura de dados de calibração em arquivo .txt
+
+    lines = []
+    data = []
+
+    with open(file_name) as f:
+        lines = f.readlines() # Armazenar linhas do arquivo em lista
+
+    for i in range(len(lines)): data.append(re.findall(r"[-+]?\d*\.\d+|\d+", lines[i]))
+    # Coleta linha-a-linha de números relevantes na lista
+
+    del data[0][0]; # Remoção dos números irrelevantes que identificam o nome de cada câmera
+    del data[1][0];
+
+    return data
+
+calib_jade_data = []
+calib_table_data = []
 imgL = cv.imread('im0.png', cv.COLOR_BGR2GRAY)
 imgR = cv.imread('im1.png', cv.COLOR_BGR2GRAY)
 
@@ -53,3 +73,6 @@ plt.imshow(filteredImg, cmap='jet')
 plt.colorbar()
 plt.savefig("color_filtered.jpg")
 cv.waitKey(0)
+
+calib_jade_data = data_reader('calib_jade.txt')
+calib_table_data = data_reader('calib_table.txt')
