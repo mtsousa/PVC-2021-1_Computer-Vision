@@ -5,24 +5,27 @@
 import cv2 as cv
 import numpy as np
 import matplotlib.pyplot as plt
-import re
 
 def data_reader(file_name):
 # Função para leitura de dados de calibração em arquivo .txt
 
-    lines = []
-    data = []
+	lines = []
+	data = []
 
-    with open(file_name) as f:
-        lines = f.readlines() # Armazenar linhas do arquivo em lista
+   	with open(file_name) as f:
+		lines = f.readlines() # Armazenar linhas do arquivo em lista
+	
+	# Percorrer linhas separando termos relevantes para inserir na lista
+	for i in range(len(lines)):
+		clean_line = lines[i].replace('=', ' ').replace('[', '').replace(';', '').replace(']', '')
+		results = clean_line.split()
+		data.append(results)
 
-    for i in range(len(lines)): data.append(re.findall(r"[-+]?\d*\.\d+|\d+", lines[i]))
-    # Coleta linha-a-linha de números relevantes na lista
+	# Remover strings que identificam o nome de cada variavel
+	for i in range(len(lines)):
+		del data[i][0]
 
-    del data[0][0]; # Remoção dos números irrelevantes que identificam o nome de cada câmera
-    del data[1][0];
-
-    return data
+   	return data
 
 def disparity_calculator(left_image, right_image, disparities_num):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
@@ -67,12 +70,12 @@ def disparity_calculator(left_image, right_image, disparities_num):
 
 # -------------------------------------------------------------------------------
 
-calib_jade_data = []
-calib_table_data = []
+calib_jade_data = data_reader('calib_jade.txt')
+calib_table_data = data_reader('calib_table.txt')
 
 imgL = cv.imread('jadeL.png', cv.COLOR_BGR2GRAY)
 imgR = cv.imread('jadeR.png', cv.COLOR_BGR2GRAY)
-disparities_num = 640
+disparities_num = int(calib_jade_data[6][0])
 
 filteredImg = disparity_calculator(imgL, imgR, disparities_num)
 
@@ -86,6 +89,3 @@ plt.savefig("color_filtered.jpg")
 plt.show()
 
 cv.waitKey(0)
-
-calib_jade_data = data_reader('calib_jade.txt')
-calib_table_data = data_reader('calib_table.txt')
