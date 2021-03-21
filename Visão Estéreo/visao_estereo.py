@@ -24,54 +24,67 @@ def data_reader(file_name):
 
     return data
 
+def disparity_calculator(left_image, right_image, disparities_num):
+# Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
+
+	window_size = 3
+
+	left_matcher = cv.StereoSGBM_create(
+	    minDisparity=16,
+	    numDisparities= disparities_num,  # Numero maximo de disparidades (640 para essa imagem)
+	    blockSize=window_size,
+	    P1=8 * 3 * window_size,
+	    P2=32 * 3 * window_size,
+	    disp12MaxDiff=12,
+	    uniquenessRatio=10,
+	    speckleWindowSize=50,
+	    speckleRange=32,
+	    preFilterCap=63,
+	    mode=cv.STEREO_SGBM_MODE_SGBM_3WAY
+	)
+	right_matcher = cv.ximgproc.createRightMatcher(left_matcher)
+
+	# parâmetros do filtro
+	lmbda = 80000
+	sigma = 1.3
+	visual_multiplier = 6
+
+	wls_filter = cv.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
+	wls_filter.setLambda(lmbda)
+
+	wls_filter.setSigmaColor(sigma)
+	displ = left_matcher.compute(left_image, right_image) 
+	dispr = right_matcher.compute(right_image, left_image)
+	displ = np.int16(displ)
+	dispr = np.int16(dispr)
+	filteredImg = wls_filter.filter(displ, left_image, None, dispr)
+
+	# Normaliza o filtro
+	filteredImg = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX)
+	filteredImg = np.uint8(filteredImg)
+
+	return filteredImg
+
+# -------------------------------------------------------------------------------
+
 calib_jade_data = []
 calib_table_data = []
-imgL = cv.imread('im0.png', cv.COLOR_BGR2GRAY)
-imgR = cv.imread('im1.png', cv.COLOR_BGR2GRAY)
 
-window_size = 3
+imgL = cv.imread('jadeL.png', cv.COLOR_BGR2GRAY)
+imgR = cv.imread('jadeR.png', cv.COLOR_BGR2GRAY)
+disparities_num = 640
 
-left_matcher = cv.StereoSGBM_create(
-    minDisparity=-1,
-    numDisparities=40*16,  # Numero maximo de disparidades (640 para essa imagem)
-    blockSize=window_size,
-    P1=8 * 3 * window_size,
-    P2=32 * 3 * window_size,
-    disp12MaxDiff=12,
-    uniquenessRatio=10,
-    speckleWindowSize=50,
-    speckleRange=32,
-    preFilterCap=63,
-    mode=cv.STEREO_SGBM_MODE_SGBM_3WAY
-)
-right_matcher = cv.ximgproc.createRightMatcher(left_matcher)
-
-# parâmetros do filtro
-lmbda = 80000
-sigma = 1.3
-visual_multiplier = 6
-
-wls_filter = cv.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
-wls_filter.setLambda(lmbda)
-
-wls_filter.setSigmaColor(sigma)
-displ = left_matcher.compute(imgL, imgR) 
-dispr = right_matcher.compute(imgR, imgL)
-displ = np.int16(displ)
-dispr = np.int16(dispr)
-filteredImg = wls_filter.filter(displ, imgL, None, dispr)
-
-# Normaliza o filtro
-filteredImg = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX)
-filteredImg = np.uint8(filteredImg)
+filteredImg = disparity_calculator(imgL, imgR, disparities_num)
 
 # cv.imshow('filtered', filteredImg) Corrigir o tamanho da janela de exibição
 cv.imwrite('filtered.jpg', filteredImg)
 
-# Utiliza matplotlib para criar perfil em pseudocor com barra de cores para a imagem
+# Mostra imagem de disparidades com mapa de cores, padrão "jet"
 plt.imshow(filteredImg, cmap='jet')
 plt.colorbar()
 plt.savefig("color_filtered.jpg")
+plt.show()
+
 cv.waitKey(0)
 
 calib_jade_data = data_reader('calib_jade.txt')
