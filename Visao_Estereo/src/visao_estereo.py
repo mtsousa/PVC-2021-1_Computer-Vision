@@ -83,7 +83,7 @@ data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
 
 imgL = cv.imread(os.path.join(data[0], images[0]), cv.COLOR_BGR2GRAY)
 imgR = cv.imread(os.path.join(data[0], images[1]), cv.COLOR_BGR2GRAY)
-disparities_num = 640
+disparities_num = 600
 min_disp = 27
 
 filteredImg = disparity_calculator(imgL, imgR, disparities_num, min_disp)
