@@ -80,6 +80,7 @@ def show(img, win_name='image'):
         raise Exception("Can't display an empty image.")
     else:
         cv2.namedWindow(win_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(win_name, (439, 331))
         cv2.imshow(win_name, img)
         cv2.waitKey()
         cv2.destroyWindow(win_name)
@@ -87,9 +88,10 @@ def show(img, win_name='image'):
 
 def main():
     base = os.path.abspath(os.path.dirname(__file__))
-    base_new = os.path.join(base, 'data', 'Middlebury', 'Jadeplant-perfect')
+    base_new = [os.path.join(base, 'data', 'Middlebury', 'Jadeplant-perfect'),
+			    os.path.join(base, 'data', 'Middlebury', 'Playtable-perfect')]
 
-    pfm_file_dir = Path(base_new)
+    pfm_file_dir = Path(base_new[0])
     calib_file_path = pfm_file_dir.joinpath('calib.txt')
     disp_left = pfm_file_dir.joinpath('disp0.pfm')
 	
