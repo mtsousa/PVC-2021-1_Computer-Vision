@@ -99,7 +99,7 @@ def main():
     calib = read_calib(calib_file_path)
 	# create depth map
     depth_map_left = create_depth_map(disp_left, calib)
-
+    cv2.imwrite('gt_depth_map.jpg', depth_map_left)
     show(depth_map_left, "depth_map")
 
 if __name__ == '__main__':

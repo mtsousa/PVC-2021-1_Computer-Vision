@@ -4,7 +4,6 @@
 
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 def data_reader(file_name):
 # Função para leitura de dados de calibração em arquivo .txt
@@ -46,9 +45,6 @@ def world_coordinates (img, calib_data):
 	# Utilizamos a matriz Q para realizar uma reprojeção, convertendo pixels com
 	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
 	world_coordinates = cv.reprojectImageTo3D(img, Q)
-	# print(world_coordinates)
-
-	pass
 
 def image_depth (img, calib_data, save_dir):
 # Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
@@ -56,10 +52,15 @@ def image_depth (img, calib_data, save_dir):
 
 	f = float(calib_data[0][0])
 	bline = float(calib_data[3][0])
-	doff = float(calib_data[2][0])
+	# doff = float(calib_data[2][0])
+	# scale = 0.03922 # Era 0.003922, mas eu mudei para 0.03922 e ficou melhor (???)
+	aux = np.zeros(img.shape)
+	img_float = aux + img
+	new_diff = img_float - aux
+	new_diff[new_diff == 0.0] = np.inf
 	
-	Z = bline * f / (np.array(img) + doff)
-
+	# Z = bline * f / (img/scale + doff)
+	Z = bline * f / new_diff
 	filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX)
 	filtered_depth_image = np.uint8(filtered_depth_image)
 	filtered_depth_image[filtered_depth_image == 0] = 255
@@ -71,20 +72,19 @@ def image_depth (img, calib_data, save_dir):
 	cv.imshow('DepthMap', filtered_depth_image)
 	cv.imwrite(save_dir, filtered_depth_image)
 	cv.waitKey(0)
+	cv.destroyAllWindows()
 	# Podemos mapear os valores da imagem de profundidade de volta para unidades em milímetros
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
 
-	pass
-
 def disparity_calculator(left_image, right_image, disparities_num, min_num):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
-	window_size = 1
+	window_size = 3
 
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
-	    numDisparities = disparities_num,  # Numero maximo de disparidades (600 para essa imagem)
+	    numDisparities = disparities_num,  # Numero maximo de disparidades
 	    blockSize = window_size,
 	    P1 = 8*3*window_size,
 	    P2 = 32*3*window_size,

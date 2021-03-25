@@ -42,6 +42,7 @@ def first_requirement():
 		# caso, é o mesmo diretório da imagem que ele leu
 		cv.imshow('filtered', filteredImg)
 		cv.waitKey(0)
+		cv.destroyAllWindows()
 		cv.imwrite(os.path.join(data[i],'filtered.jpg'), filteredImg)
 
 		# Mostra imagem de disparidades com mapa de cores, padrão "jet"
@@ -62,7 +63,7 @@ def second_requirement():
 	images = ['MorpheusL.jpg', 'MorpheusR.jpg', 'warriorL.jpg', 'warriorR.jpg']
 	data = os.path.join(base_new, 'data', 'FurukawaPonce')
 
-	f.world_coordinates(filteredImg, calib_data)
+	# f.world_coordinates(filteredImg, calib_data)
 
 def third_requirement():
 	pass
