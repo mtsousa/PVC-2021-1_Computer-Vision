@@ -26,13 +26,12 @@ def first_requirement():
 		imgR = cv.imread(os.path.join(data[i], images[1]), cv.COLOR_BGR2GRAY)
 
 		calib_data = f.data_reader(os.path.join(data[i], 'calib.txt'))
-		#calib_table_data = f.data_reader(os.path.join(data[1], 'calib.txt'))
 
-		disparities_num = int(calib_data[9][0])
 		min_disp = int(calib_data[8][0])
+		max_disp = int(calib_data[9][0])
 		
 		print('Calculating disparity map...', flush=True)
-		filteredImg = f.disparity_calculator(imgL, imgR, disparities_num, min_disp)
+		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp)
 
 		# Redimensiona a imagem para uma melhor visualização
 		cv.namedWindow('filtered', cv.WINDOW_NORMAL)
@@ -43,7 +42,7 @@ def first_requirement():
 		cv.imshow('filtered', filteredImg)
 		cv.waitKey(0)
 		cv.destroyAllWindows()
-		cv.imwrite(os.path.join(data[i],'filtered.jpg'), filteredImg)
+		cv.imwrite(os.path.join(data[i],'disparidade.pgm'), filteredImg)
 
 		# Mostra imagem de disparidades com mapa de cores, padrão "jet"
 		# plt.imshow(filteredImg, cmap='jet')
@@ -52,7 +51,7 @@ def first_requirement():
 		# plt.show()
 
 		print('Calculating depth map...', flush=True)
-		f.image_depth(filteredImg, calib_data, os.path.join(data[i],'DepthMap.jpg'))
+		f.image_depth(filteredImg, calib_data, os.path.join(data[i],'profundidade.png'))
 
 def second_requirement():
 	# Define o diretório anterior ao diretório do programa
