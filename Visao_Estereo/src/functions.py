@@ -52,14 +52,11 @@ def image_depth (img, calib_data, save_dir):
 
 	f = float(calib_data[0][0])
 	bline = float(calib_data[3][0])
-	# doff = float(calib_data[2][0])
-	# scale = 0.03922 # Era 0.003922, mas eu mudei para 0.03922 e ficou melhor (???)
 	aux = np.zeros(img.shape)
 	img_float = aux + img
 	new_diff = img_float - aux
 	new_diff[new_diff == 0.0] = np.inf
 	
-	# Z = bline * f / (img/scale + doff)
 	Z = bline * f / new_diff
 	filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX)
 	filtered_depth_image = np.uint8(filtered_depth_image)
@@ -77,17 +74,17 @@ def image_depth (img, calib_data, save_dir):
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
 
-def disparity_calculator(left_image, right_image, disparities_num, min_num):
+def disparity_calculator(left_image, right_image, min_num, max_num):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
 	window_size = 3
 
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
-	    numDisparities = disparities_num,  # Numero maximo de disparidades
+	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
 	    blockSize = window_size,
-	    P1 = 8*3*window_size,
-	    P2 = 32*3*window_size,
+	    P1 = 8*3*window_size**2,
+	    P2 = 32*3*window_size**2,
 	    disp12MaxDiff = 12,
 	    uniquenessRatio = 10,
 	    speckleWindowSize = 50,
