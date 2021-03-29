@@ -22,17 +22,17 @@ def first_requirement():
 
 	for i in [0,1]:
 		print('\nLoading images from ' + name[i] + ' data base...', flush=True)
-		imgL = cv.imread(os.path.join(data[i], images[0]), cv.COLOR_BGR2GRAY)
-		imgR = cv.imread(os.path.join(data[i], images[1]), cv.COLOR_BGR2GRAY)
+		imgL = cv.imread(os.path.join(data[i], images[0]), cv.IMREAD_GRAYSCALE)
+		imgR = cv.imread(os.path.join(data[i], images[1]), cv.IMREAD_GRAYSCALE)
 
 		calib_data = f.data_reader(os.path.join(data[i], 'calib.txt'))
 
 		min_disp = int(calib_data[8][0])
 		max_disp = int(calib_data[9][0])
-		
+
 		print('Calculating disparity map...', flush=True)
 		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp)
-
+		
 		# Redimensiona a imagem para uma melhor visualização
 		cv.namedWindow('filtered', cv.WINDOW_NORMAL)
 		cv.resizeWindow('filtered', (439, 331))
@@ -43,12 +43,17 @@ def first_requirement():
 		cv.waitKey(0)
 		cv.destroyAllWindows()
 		cv.imwrite(os.path.join(data[i],'disparidade.pgm'), filteredImg)
-
+		
 		# Mostra imagem de disparidades com mapa de cores, padrão "jet"
-		# plt.imshow(filteredImg, cmap='jet')
-		# plt.colorbar()
+		plt.imshow(filteredImg, cmap='jet')
+		plt.colorbar()
 		# plt.savefig(os.path.join(data[i], 'color_filtered.jpg'))
-		# plt.show()
+		plt.show()
+
+		disp_max =  (float(calib_data[5][0]) / 3)
+		gt = cv.imread(os.path.join(data[i], 'disp0-n.pgm'), cv.IMREAD_GRAYSCALE)
+		deu_certo = f.taxa_erro(filteredImg, gt, disp_max)
+		print('Taxa de pixels ruins: {:.2f}%'.format(deu_certo*100.0))
 
 		print('Calculating depth map...', flush=True)
 		f.image_depth(filteredImg, calib_data, os.path.join(data[i],'profundidade.png'))
@@ -73,7 +78,7 @@ if __name__ == "__main__":
 	requirement = ['1', '2', '3']
 
 	while data not in requirement: 
-		print('\n\nThere is not requiremente number ' + data)
+		print('\n\nError! There is no requirement number ' + data)
 		data = input('Define the number of requirement (1, 2, 3): ')
 	if data == '1':
 		first_requirement()
@@ -81,3 +86,4 @@ if __name__ == "__main__":
 		second_requirement()
 	elif data == '3':
 		third_requirement()
+		
