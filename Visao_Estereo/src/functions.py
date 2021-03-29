@@ -41,7 +41,6 @@ def world_coordinates (img, calib_data):
                     [0, 0, 0, f], 
                     [0, 0, -1/bline, doff/bline]])
 
-
 	# Utilizamos a matriz Q para realizar uma reprojeção, convertendo pixels com
 	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
 	world_coordinates = cv.reprojectImageTo3D(img, Q)
@@ -78,7 +77,6 @@ def disparity_calculator(left_image, right_image, min_num, max_num):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
 	window_size = 3
-
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
 	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
@@ -97,19 +95,26 @@ def disparity_calculator(left_image, right_image, min_num, max_num):
 	# parâmetros do filtro
 	lmbda = 80000
 	sigma = 1.3
-
 	wls_filter = cv.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
 	wls_filter.setLambda(lmbda)
-
 	wls_filter.setSigmaColor(sigma)
 	displ = left_matcher.compute(left_image, right_image) 
 	dispr = right_matcher.compute(right_image, left_image)
 	displ = np.int16(displ)
 	dispr = np.int16(dispr)
-	filteredImg = wls_filter.filter(displ, left_image, None, dispr)
+	filteredImg = (wls_filter.filter(displ, left_image, None, dispr) / 16.0)
 
-	# Normaliza o filtro
 	filteredImg = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX)
 	filteredImg = np.uint8(filteredImg)
-
+	
 	return filteredImg
+
+def taxa_erro(disparity_map, gt_map, disp):
+# Função que calcula quantidade de pixels ruins com erro de disparidade maior que 2
+
+	gt = np.float32(gt_map)
+	gt = np.int16(gt / 255.0 * float(disp))
+	disparity_map = np.int16(np.float32(disparity_map) / 255.0 * float(disp))
+	correct = np.count_nonzero(np.abs(disparity_map - gt) > 2.0)
+
+	return float(correct) / gt.size
