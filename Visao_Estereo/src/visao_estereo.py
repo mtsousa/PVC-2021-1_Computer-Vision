@@ -50,7 +50,9 @@ def first_requirement():
 		# plt.savefig(os.path.join(data[i], 'color_filtered.jpg'))
 		plt.show()
 
-		disp_max =  (float(calib_data[5][0]) / 3)
+		# O valor máximo de disparidade pode ser retirado do arquivo de dados de calibração
+		# ou aproximado como um terço da altura da imagem : (float(calib_data[5][0]) / 3)
+		disp_max =  float(calib_data[9][0])
 		gt = cv.imread(os.path.join(data[i], 'disp0-n.pgm'), cv.IMREAD_GRAYSCALE)
 		deu_certo = f.taxa_erro(filteredImg, gt, disp_max)
 		print('Taxa de pixels ruins: {:.2f}%'.format(deu_certo*100.0))
