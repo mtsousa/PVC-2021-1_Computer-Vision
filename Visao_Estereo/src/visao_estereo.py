@@ -29,9 +29,10 @@ def first_requirement():
 
 		min_disp = int(calib_data[8][0])
 		max_disp = int(calib_data[9][0])
+		num_disp = int(calib_data[6][0])
 
 		print('Calculating disparity map...', flush=True)
-		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp)
+		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp, num_disp)
 		
 		# Redimensiona a imagem para uma melhor visualização
 		cv.namedWindow('filtered', cv.WINDOW_NORMAL)

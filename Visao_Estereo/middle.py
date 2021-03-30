@@ -15,7 +15,7 @@ def read_calib(calib_file_path):
 
     return calib
 
-def read_pfm(pfm_file_path):
+def read_pfm(pfm_file_path, base_new):
     with open(pfm_file_path, 'rb') as pfm_file:
         header = pfm_file.readline().decode().rstrip()
         channels = 3 if header == 'PF' else 1
@@ -45,21 +45,21 @@ def read_pfm(pfm_file_path):
     
     groundtruth = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     show(groundtruth, "disparity")
-    cv2.imwrite('gt_disparity.png', groundtruth)
+    cv2.imwrite(os.path.join(base_new, 'gt_disparity.png'), groundtruth)
 
-    plt.imshow(groundtruth, cmap='jet')
-    plt.colorbar()
-    plt.savefig('color_gt_disparity.png')
-    plt.show()
+    # plt.imshow(groundtruth, cmap='jet')
+    # plt.colorbar()
+    # plt.savefig('color_gt_disparity.png')
+    # plt.show()
     # Até aqui...
     # O resto veio daqui: https://blog.csdn.net/weixin_44899143/article/details/89186891
 
     return dispariy, [(height, width, channels), scale]
 
 
-def create_depth_map(pfm_file_path, calib=None):
+def create_depth_map(pfm_file_path, base_new, calib=None):
 
-    dispariy, [shape,scale] = read_pfm(pfm_file_path)
+    dispariy, [shape,scale] = read_pfm(pfm_file_path, base_new)
 
     if calib is None:
         raise Exception("Loss calibration information.")
@@ -90,17 +90,19 @@ def main():
     base = os.path.abspath(os.path.dirname(__file__))
     base_new = [os.path.join(base, 'data', 'Middlebury', 'Jadeplant-perfect'),
 			    os.path.join(base, 'data', 'Middlebury', 'Playtable-perfect')]
-
-    pfm_file_dir = Path(base_new[0])
-    calib_file_path = pfm_file_dir.joinpath('calib.txt')
-    disp_left = pfm_file_dir.joinpath('disp0.pfm')
-	
-    # calibration information
-    calib = read_calib(calib_file_path)
-	# create depth map
-    depth_map_left = create_depth_map(disp_left, calib)
-    cv2.imwrite('gt_depth_map.jpg', depth_map_left)
-    show(depth_map_left, "depth_map")
+    name = ['Jadeplant', 'Playtable']
+    
+    for i in range(len(name)):
+        pfm_file_dir = Path(base_new[i])
+        calib_file_path = pfm_file_dir.joinpath('calib.txt')
+        disp_left = pfm_file_dir.joinpath('disp0.pfm')
+        
+        # calibration information
+        calib = read_calib(calib_file_path)
+        # create depth map
+        depth_map_left = create_depth_map(disp_left, base_new[i], calib)
+        cv2.imwrite(os.path.join(base_new[i], 'gt_depth_map.jpg'), depth_map_left)
+        show(depth_map_left, "depth_map")
 
 if __name__ == '__main__':
     main()

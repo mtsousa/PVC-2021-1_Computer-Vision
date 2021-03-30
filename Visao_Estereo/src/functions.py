@@ -73,7 +73,7 @@ def image_depth (img, calib_data, save_dir):
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
 
-def disparity_calculator(left_image, right_image, min_num, max_num):
+def disparity_calculator(left_image, right_image, min_num, max_num, num_disp):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
 	window_size = 3
@@ -81,9 +81,9 @@ def disparity_calculator(left_image, right_image, min_num, max_num):
 	    minDisparity = min_num,
 	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
 	    blockSize = window_size,
-	    P1 = 8*3*window_size**2,
-	    P2 = 32*3*window_size**2,
-	    disp12MaxDiff = 12,
+	    P1 = 8*3*window_size,
+	    P2 = 32*3*window_size,
+	    disp12MaxDiff = -1, # Desabilitado 
 	    uniquenessRatio = 10,
 	    speckleWindowSize = 50,
 	    speckleRange = 32,
