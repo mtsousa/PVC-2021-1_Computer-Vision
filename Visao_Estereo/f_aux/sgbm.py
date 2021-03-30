@@ -3,11 +3,15 @@ import numpy as np
 import os.path
 
 base = os.path.abspath(os.path.dirname(__file__))
+if os.name == 'nt':
+    base_new = base.replace('\\f_aux', '')
+else:
+    base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
 images = ['im0.png', 'im1.png']
-data = [os.path.join(base, 'data', 'Middlebury', 'Jadeplant-perfect'),
-        os.path.join(base, 'data', 'Middlebury', 'Playtable-perfect')]
+data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
+        os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
 
 
 imgL = cv.imread(os.path.join(data[1], images[0]), 0)#cv.COLOR_BGR2GRAY)

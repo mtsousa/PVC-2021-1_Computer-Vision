@@ -76,12 +76,15 @@ def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp, mask_resize):
 		  "\nAverage error: ", avgErr, '\n')
 
 base = os.path.abspath(os.path.dirname(__file__))
-#base_new = base.replace('\\src', '')
+if os.name == 'nt':
+	base_new = base.replace('\\f_aux', '')
+else:
+	base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
 images = ['disparidade.pgm', 'gt_disparity.png', 'mask.png']
-data = [os.path.join(base, 'data', 'Middlebury', 'Jadeplant-perfect'),
-		os.path.join(base, 'data', 'Middlebury', 'Playtable-perfect')]
+data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
+		os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
 name = ['Jadeplant', 'Playtable']
 
 for i in range(len(name)):

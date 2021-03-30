@@ -88,20 +88,25 @@ def show(img, win_name='image'):
 
 def main():
     base = os.path.abspath(os.path.dirname(__file__))
-    base_new = [os.path.join(base, 'data', 'Middlebury', 'Jadeplant-perfect'),
-			    os.path.join(base, 'data', 'Middlebury', 'Playtable-perfect')]
+    if os.name == 'nt':
+	    base_new = base.replace('\\f_aux', '')
+	else:
+	    base_new = base.replace('/f_aux', '')
+
+    data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
+			    os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
     name = ['Jadeplant', 'Playtable']
     
     for i in range(len(name)):
-        pfm_file_dir = Path(base_new[i])
+        pfm_file_dir = Path(data[i])
         calib_file_path = pfm_file_dir.joinpath('calib.txt')
         disp_left = pfm_file_dir.joinpath('disp0.pfm')
         
         # calibration information
         calib = read_calib(calib_file_path)
         # create depth map
-        depth_map_left = create_depth_map(disp_left, base_new[i], calib)
-        cv2.imwrite(os.path.join(base_new[i], 'gt_depth_map.jpg'), depth_map_left)
+        depth_map_left = create_depth_map(disp_left, data[i], calib)
+        cv2.imwrite(os.path.join(data[i], 'gt_depth_map.jpg'), depth_map_left)
         show(depth_map_left, "depth_map")
 
 if __name__ == '__main__':

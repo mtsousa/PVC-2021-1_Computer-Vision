@@ -12,7 +12,10 @@ import functions as f
 def first_requirement():
 	# Define o diretório anterior ao diretório do programa
 	base = os.path.abspath(os.path.dirname(__file__))
-	base_new = base.replace('\\src', '')
+	if os.name == 'nt':
+		base_new = base.replace('\\src', '')
+	else:
+		base_new = base.replace('/src', '')
 
 	# Define os vetores das imagens e dos caminhos para as imagens
 	images = ['im0.png', 'im1.png']
@@ -48,7 +51,6 @@ def first_requirement():
 		# Mostra imagem de disparidades com mapa de cores, padrão "jet"
 		plt.imshow(filteredImg, cmap='jet')
 		plt.colorbar()
-		# plt.savefig(os.path.join(data[i], 'color_filtered.jpg'))
 		plt.show()
 
 		# O valor máximo de disparidade pode ser retirado do arquivo de dados de calibração
@@ -89,4 +91,3 @@ if __name__ == "__main__":
 		second_requirement()
 	elif data == '3':
 		third_requirement()
-		
