@@ -73,7 +73,7 @@ def image_depth (img, calib_data, save_dir):
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
 
-def disparity_calculator(left_image, right_image, min_num, max_num, num_disp):
+def disparity_calculator(left_image, right_image, min_num, max_num):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
 	window_size = 3
@@ -109,12 +109,58 @@ def disparity_calculator(left_image, right_image, min_num, max_num, num_disp):
 	
 	return filteredImg
 
-def taxa_erro(disparity_map, gt_map, disp):
-# Função que calcula quantidade de pixels ruins com erro de disparidade maior que 2
+def resize_image(imgL, imgR):
+# Função que redimensiona a imagem da esquerda
 
-	gt = np.float32(gt_map)
-	gt = np.int16(gt / 255.0 * float(disp))
-	disparity_map = np.int16(np.float32(disparity_map) / 255.0 * float(disp))
-	correct = np.count_nonzero(np.abs(disparity_map - gt) > 2.0)
+    height, width = imgR.shape
+    imgL = cv.resize(imgL, (width, height), interpolation = cv.INTER_LINEAR)
+    return imgL
 
-	return float(correct) / gt.size
+def intrinsic_matrix(focal_length, princPoint, skew):
+    K = np.zeros((3,3))
+    K[0,0] = focal_length[0]
+    K[0,1] = skew
+    K[0,2] = princPoint[0]
+    K[1,1] = focal_length[1]
+    K[1,2] = princPoint[1]
+    K[2,2] = 1
+    return K
+
+def extrinsic_matrix(R, Tc):
+    Ext = np.zeros((3,4))
+    Ext = np.array([[R[0,0], R[0,1], R[0,2], Tc[0]], 
+				  [R[1,0], R[1,1], R[1,2], Tc[1]],
+				  [R[2,0], R[2,1], R[2,2], Tc[2]]])
+    return Ext
+
+def image_rectify(img_left, img_right):
+		
+	fc = [[6704.926882, 6705.241311], [6682.125964, 6681.475962]] 
+	cc = [[738.251932, 457.560286], [875.207200, 357.700292]]
+	alpha = [0.000103, 0.000101]
+	rotate_L = np.asarray([[0.70717199,  0.70613396, -0.03581348],
+					[0.28815232, -0.33409066, -0.89741388], 
+					[-0.64565936,  0.62430623, -0.43973369]])
+	transl_L = np.array([-532.285900, 207.183600, 2977.408000])
+
+	rotate_R = np.asarray([[0.48946344,  0.87099159, -0.04241701], 
+					[0.33782142, -0.23423702, -0.91159734], 
+					[-0.80392924,  0.43186419, -0.40889007]])
+	transl_R = np.array([-614.549000, 193.240700, 3242.754000])
+
+	matrixK_L = intrinsic_matrix(fc[0], cc[0], alpha[0])
+	matrixK_R = intrinsic_matrix(fc[1], cc[1], alpha[1])
+
+	matrix_ext_L = extrinsic_matrix(rotate_L, transl_L)
+	matrix_ext_R = extrinsic_matrix(rotate_R, transl_R)
+
+	matrixP_L = np.matmul(matrixK_L, matrix_ext_L)
+	matrixP_R = np.matmul(matrixK_R, matrix_ext_R)
+	
+	h, w = img_left.shape
+
+	mapL = cv.initUndistortRectifyMap(matrixK_L, (0,0,0,0,0), rotate_L, matrixP_L, (w,h), cv.CV_16SC2)
+	mapR = cv.initUndistortRectifyMap(matrixK_R, (0,0,0,0,0), rotate_R, matrixP_R, (w,h), cv.CV_16SC2)
+
+	inter = cv.INTER_LANCZOS4
+	return cv.remap(img_left, mapL[0], mapL[1], inter), cv.remap(img_right, mapR[0], mapR[1], inter)

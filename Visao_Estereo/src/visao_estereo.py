@@ -32,34 +32,21 @@ def first_requirement():
 
 		min_disp = int(calib_data[8][0])
 		max_disp = int(calib_data[9][0])
-		num_disp = int(calib_data[6][0])
 
 		print('Calculating disparity map...', flush=True)
-		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp, num_disp)
+		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp)
 		
 		# Redimensiona a imagem para uma melhor visualização
 		cv.namedWindow('filtered', cv.WINDOW_NORMAL)
 		cv.resizeWindow('filtered', (439, 331))
 
-		# Cria a imagem no diretório espeficidado pelo caminho, nesse
-		# caso, é o mesmo diretório da imagem que ele leu
+		# Mostra o resultado do mapa de disparidade e o salva no diretório especificado
 		cv.imshow('filtered', filteredImg)
 		cv.waitKey(0)
 		cv.destroyAllWindows()
 		cv.imwrite(os.path.join(data[i],'disparidade.pgm'), filteredImg)
-		
-		# Mostra imagem de disparidades com mapa de cores, padrão "jet"
-		plt.imshow(filteredImg, cmap='jet')
-		plt.colorbar()
-		plt.show()
 
-		# O valor máximo de disparidade pode ser retirado do arquivo de dados de calibração
-		# ou aproximado como um terço da altura da imagem : (float(calib_data[5][0]) / 3)
-		disp_max =  float(calib_data[9][0])
-		gt = cv.imread(os.path.join(data[i], 'disp0-n.pgm'), cv.IMREAD_GRAYSCALE)
-		deu_certo = f.taxa_erro(filteredImg, gt, disp_max)
-		print('Taxa de pixels ruins: {:.2f}%'.format(deu_certo*100.0))
-
+		# Calcula o mapa de profundidade e o salva no diretório especificado
 		print('Calculating depth map...', flush=True)
 		f.image_depth(filteredImg, calib_data, os.path.join(data[i],'profundidade.png'))
 
@@ -69,10 +56,29 @@ def second_requirement():
 	base_new = base.replace('\\src', '')
 
 	# Define os vetores das imagens e dos caminhos para as imagens
-	images = ['MorpheusL.jpg', 'MorpheusR.jpg', 'warriorL.jpg', 'warriorR.jpg']
+	images = ['MorpheusL.jpg', 'MorpheusR.jpg']
 	data = os.path.join(base_new, 'data', 'FurukawaPonce')
 
-	# f.world_coordinates(filteredImg, calib_data)
+	print('\nLoading Morpheus images from FurukawaPonce data base...', flush=True)
+	imgL = cv.imread(os.path.join(data, images[0]), cv.IMREAD_GRAYSCALE)
+	imgR = cv.imread(os.path.join(data, images[1]), cv.IMREAD_GRAYSCALE)
+
+	imgL = f.resize_image(imgL, imgR)
+	new_imgL, new_imgR = f.image_rectify(imgL, imgR)
+
+	# Calcula o mapa de disparidade e de profundidade #
+
+	cv.namedWindow('imgL', cv.WINDOW_NORMAL)
+	cv.resizeWindow('imgL', (439, 331))
+	cv.namedWindow('imgR', cv.WINDOW_NORMAL)
+	cv.resizeWindow('imgR', (439, 331))
+
+	cv.imshow('imgL', new_imgL)
+	cv.imshow('imgR', new_imgR)
+	cv.waitKey(0)
+	cv.destroyAllWindows()
+
+	#f.world_coordinates(filteredImg, calib_data)
 
 def third_requirement():
 	pass
