@@ -67,16 +67,22 @@ def second_requirement():
 	new_imgL, new_imgR = f.image_rectify(imgL, imgR)
 
 	# Calcula o mapa de disparidade e de profundidade #
+	print('Calculating disparity map...', flush=True)
+	filteredImg = f.disparity_calculator(new_imgL, new_imgR, -128, 256)
+	
+	# Redimensiona a imagem para uma melhor visualização
+	cv.namedWindow('filtered', cv.WINDOW_NORMAL)
+	cv.resizeWindow('filtered', (439, 331))
 
-	cv.namedWindow('imgL', cv.WINDOW_NORMAL)
-	cv.resizeWindow('imgL', (439, 331))
-	cv.namedWindow('imgR', cv.WINDOW_NORMAL)
-	cv.resizeWindow('imgR', (439, 331))
-
-	cv.imshow('imgL', new_imgL)
-	cv.imshow('imgR', new_imgR)
+	# Mostra o resultado do mapa de disparidade e o salva no diretório especificado
+	cv.imshow('filtered', filteredImg)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
+	#cv.imwrite(os.path.join(data[i],'disparidade.pgm'), filteredImg)
+
+	# Calcula o mapa de profundidade e o salva no diretório especificado
+	#print('Calculating depth map...', flush=True)
+	#f.image_depth(filteredImg, calib_data, os.path.join(data[i],'profundidade.png'))
 
 	#f.world_coordinates(filteredImg, calib_data)
 
