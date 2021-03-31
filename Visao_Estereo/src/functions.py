@@ -291,8 +291,8 @@ def image_rectify(img_left, img_right):
 	cv.namedWindow('imgR', cv.WINDOW_NORMAL)
 	cv.resizeWindow('imgR', (439, 331))
 
-	cv.imshow('imgL', new_imgL)
-	cv.imshow('imgR', new_imgR)
+	cv.imshow('imgL', img1_rectified)
+	cv.imshow('imgR', img2_rectified)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
