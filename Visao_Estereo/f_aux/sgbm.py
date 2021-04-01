@@ -9,13 +9,13 @@ else:
     base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
-images = ['im0.png', 'im1.png']
+images = ['im0.png', 'im1.png', 'rectified_1.jpg', 'rectified_2.jpg']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
-        os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
+        os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect'),
+        os.path.join(base_new, 'data', 'Futukawa')]
 
-
-imgL = cv.imread(os.path.join(data[1], images[0]), 0)#cv.COLOR_BGR2GRAY)
-imgR = cv.imread(os.path.join(data[1], images[1]), 0)#cv.COLOR_BGR2GRAY)
+imgL = cv.imread(os.path.join(data[2], images[2]), 0)#cv.COLOR_BGR2GRAY)
+imgR = cv.imread(os.path.join(data[2], images[3]), 0)#cv.COLOR_BGR2GRAY)
 #stereo = cv.StereoBM_create(numDisparities=16*29, blockSize=15)
 
 win_size = 3

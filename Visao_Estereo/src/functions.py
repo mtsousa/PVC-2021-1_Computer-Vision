@@ -167,24 +167,26 @@ def extrinsic_matrix(R, Tc):
 
 # Visualize epilines
 # Adapted from: https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
-def drawlines(img1src, img2src, lines, pts1src, pts2src):
+def drawlines(img1src, lines, pts1src):
 	''' img1 - image on which we draw the epilines for the points in img2
 		lines - corresponding epilines '''
 	r, c = img1src.shape
 	img1color = cv.cvtColor(img1src, cv.COLOR_GRAY2BGR)
-	img2color = cv.cvtColor(img2src, cv.COLOR_GRAY2BGR)
 	# Edit: use the same random seed so that two images are comparable!
 	np.random.seed(0)
-	for r, pt1, pt2 in zip(lines, pts1src, pts2src):
+	for r, pt1 in zip(lines, pts1src):
 		color = tuple(np.random.randint(0, 255, 3).tolist())
 		x0, y0 = map(int, [0, -r[2]/r[1]])
 		x1, y1 = map(int, [c, -(r[2]+r[0]*c)/r[1]])
-		img1color = cv.line(img1color, (x0, y0), (x1, y1), color, 1)
-		img1color = cv.circle(img1color, tuple(pt1), 5, color, -1)
-		img2color = cv.circle(img2color, tuple(pt2), 5, color, -1)
-	return img1color, img2color
+		img1color = cv.line(img1color, (x0, y0), (x1, y1), color, 3)
+		img1color = cv.circle(img1color, tuple(pt1), 5, color, 1)
+	return img1color
 
 def image_rectify(imgL, imgR):
+# Função que encontra os pontos de match e retifica as imagens
+
+	imgL_name = 'imgL'
+	imgR_name = 'imgR'
 
 	# find the keypoints and descriptors with SIFT
 	sift = cv.SIFT_create()
@@ -194,6 +196,8 @@ def image_rectify(imgL, imgR):
 	# Visualize keypoints
 	imgSift = cv.drawKeypoints(
 		imgL, kp1, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+	cv.namedWindow('SIFT Keypoints', cv.WINDOW_NORMAL)
+	cv.resizeWindow('SIFT Keypoints', (700, 650))
 	cv.imshow("SIFT Keypoints", imgSift)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
@@ -202,7 +206,7 @@ def image_rectify(imgL, imgR):
 	# Based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
 	FLANN_INDEX_KDTREE = 1
 	index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-	search_params = dict(checks=50)   # or pass empty dictionary
+	search_params = dict(checks=80)   # or pass empty dictionary
 	flann = cv.FlannBasedMatcher(index_params, search_params)
 	matches = flann.knnMatch(des1, des2, k=2)
 
@@ -215,7 +219,7 @@ def image_rectify(imgL, imgR):
 	pts2 = []
 
 	for i, (m, n) in enumerate(matches):
-		if m.distance < 0.7*n.distance:
+		if m.distance < 0.6*n.distance:
 			# Keep this keypoint pair
 			matchesMask[i] = [1, 0]
 			good.append(m)
@@ -224,16 +228,13 @@ def image_rectify(imgL, imgR):
 
 	# Draw the keypoint matches between both pictures
 	# Still based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
-	draw_params = dict(matchColor=(0, 255, 0),
-					singlePointColor=(255, 0, 0),
-					matchesMask=matchesMask[300:500],
-					flags=cv.DrawMatchesFlags_DEFAULT)
+	# draw_params = dict(matchColor=(0, 255, 0),
+					# singlePointColor=(255, 0, 0),
+					# matchesMask=matchesMask[300:500],
+					# flags=cv.DrawMatchesFlags_DEFAULT)
 
-	keypoint_matches = cv.drawMatchesKnn(
-		imgL, kp1, imgR, kp2, matches[300:500], None, **draw_params)
-	cv.imshow("Keypoint matches", keypoint_matches)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
+	# keypoint_matches = cv.drawMatchesKnn(
+	# 	imgL, kp1, imgR, kp2, matches[300:500], None, **draw_params)
 	
 	# ------------------------------------------------------------
 	# STEREO RECTIFICATION
@@ -253,19 +254,24 @@ def image_rectify(imgL, imgR):
 	lines1 = cv.computeCorrespondEpilines(
 		pts2.reshape(-1, 1, 2), 2, fundamental_matrix)
 	lines1 = lines1.reshape(-1, 3)
-	img5, img6 = drawlines(imgL, imgR, lines1, pts1, pts2)
+	line_imgL = drawlines(imgL, lines1, pts1)
 
 	# Find epilines corresponding to points in left image (first image) and
 	# drawing its lines on right image
 	lines2 = cv.computeCorrespondEpilines(
 		pts1.reshape(-1, 1, 2), 1, fundamental_matrix)
 	lines2 = lines2.reshape(-1, 3)
-	img3, img4 = drawlines(imgR, imgL, lines2, pts2, pts1)
+	line_imgR = drawlines(imgR, lines2, pts2)
 
-	# plt.subplot(121), plt.imshow(img5)
-	# plt.subplot(122), plt.imshow(img3)
-	# plt.suptitle("Epilines in both images")
-	# plt.show()
+	cv.namedWindow(imgL_name, cv.WINDOW_NORMAL)
+	cv.resizeWindow(imgL_name, (439, 331))
+	cv.namedWindow(imgR_name, cv.WINDOW_NORMAL)
+	cv.resizeWindow(imgR_name, (439, 331))
+
+	cv.imshow(imgL_name, line_imgL)
+	cv.imshow(imgR_name, line_imgR)
+	cv.waitKey(0)
+	cv.destroyAllWindows()
 
 	# Stereo rectification (uncalibrated variant)
 	# Adapted from: https://stackoverflow.com/a/62607343
@@ -280,18 +286,26 @@ def image_rectify(imgL, imgR):
 	imgL_rectified = cv.warpPerspective(imgL, H1, (w1, h1))
 	imgR_rectified = cv.warpPerspective(imgR, H2, (w2, h2))
 
-	cv.namedWindow('imgL', cv.WINDOW_NORMAL)
-	cv.resizeWindow('imgL', (439, 331))
-	cv.namedWindow('imgR', cv.WINDOW_NORMAL)
-	cv.resizeWindow('imgR', (439, 331))
+	y = 58
+	x = 58
+	h, w = imgR_rectified.shape
+	crop_imgR = imgR_rectified[y:h-y, x:w-x]
+	crop_imgL = imgL_rectified[y:h-y, x:w-x]
 
-	cv.imshow('imgL', imgL_rectified)
-	cv.imshow('imgR', imgR_rectified)
+	cv.namedWindow(imgL_name, cv.WINDOW_NORMAL)
+	cv.resizeWindow(imgL_name, (439, 331))
+	cv.namedWindow(imgR_name, cv.WINDOW_NORMAL)
+	cv.resizeWindow(imgR_name, (439, 331))
+
+	cv.imshow(imgL_name, crop_imgL)
+	cv.imshow(imgR_name, crop_imgR)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
-	# cv.imwrite("rectified_1.png", imgL_rectified)
-	# cv.imwrite("rectified_2.png", imgR_rectified)
+	# cv.imwrite("rectified_1.jpg", imgL_rectified)
+	# cv.imwrite("rectified_2.jpg", imgR_rectified)
+	# cv.imwrite("cropped_imgL.jpg", crop_imgL)
+	# cv.imwrite("cropped_imgR.jpg", crop_imgR)
 
 	# Draw the rectified images
 	# fig, axes = plt.subplots(1, 2, figsize=(15, 10))
@@ -305,4 +319,4 @@ def image_rectify(imgL, imgR):
 	# plt.savefig("rectified_images.png")
 	# plt.show()
 
-	return imgL_rectified, imgR_rectified
+	return crop_imgL, crop_imgR#imgL_rectified, imgR_rectified
