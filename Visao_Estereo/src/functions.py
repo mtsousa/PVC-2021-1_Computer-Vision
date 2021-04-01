@@ -184,22 +184,16 @@ def drawlines(img1src, img2src, lines, pts1src, pts2src):
 		img2color = cv.circle(img2color, tuple(pt2), 5, color, -1)
 	return img1color, img2color
 
-def image_rectify(img_left, img_right):
-	# 1. Detect keypoints and their descriptors
-	# Based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
+def image_rectify(imgL, imgR):
 
-	img1 = img_left
-	img2 = img_right
-
-	# Initiate SIFT detector
-	sift = cv.SIFT_create()
 	# find the keypoints and descriptors with SIFT
-	kp1, des1 = sift.detectAndCompute(img1, None)
-	kp2, des2 = sift.detectAndCompute(img2, None)
+	sift = cv.SIFT_create()
+	kp1, des1 = sift.detectAndCompute(imgL, None)
+	kp2, des2 = sift.detectAndCompute(imgR, None)
 
 	# Visualize keypoints
 	imgSift = cv.drawKeypoints(
-		img1, kp1, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+		imgL, kp1, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
 	cv.imshow("SIFT Keypoints", imgSift)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
@@ -236,7 +230,7 @@ def image_rectify(img_left, img_right):
 					flags=cv.DrawMatchesFlags_DEFAULT)
 
 	keypoint_matches = cv.drawMatchesKnn(
-		img1, kp1, img2, kp2, matches[300:500], None, **draw_params)
+		imgL, kp1, imgR, kp2, matches[300:500], None, **draw_params)
 	cv.imshow("Keypoint matches", keypoint_matches)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
@@ -259,14 +253,14 @@ def image_rectify(img_left, img_right):
 	lines1 = cv.computeCorrespondEpilines(
 		pts2.reshape(-1, 1, 2), 2, fundamental_matrix)
 	lines1 = lines1.reshape(-1, 3)
-	img5, img6 = drawlines(img1, img2, lines1, pts1, pts2)
+	img5, img6 = drawlines(imgL, imgR, lines1, pts1, pts2)
 
 	# Find epilines corresponding to points in left image (first image) and
 	# drawing its lines on right image
 	lines2 = cv.computeCorrespondEpilines(
 		pts1.reshape(-1, 1, 2), 1, fundamental_matrix)
 	lines2 = lines2.reshape(-1, 3)
-	img3, img4 = drawlines(img2, img1, lines2, pts2, pts1)
+	img3, img4 = drawlines(imgR, imgL, lines2, pts2, pts1)
 
 	# plt.subplot(121), plt.imshow(img5)
 	# plt.subplot(122), plt.imshow(img3)
@@ -275,34 +269,34 @@ def image_rectify(img_left, img_right):
 
 	# Stereo rectification (uncalibrated variant)
 	# Adapted from: https://stackoverflow.com/a/62607343
-	h1, w1 = img1.shape
-	h2, w2 = img2.shape
+	h1, w1 = imgL.shape
+	h2, w2 = imgR.shape
 	_, H1, H2 = cv.stereoRectifyUncalibrated(
 		np.float32(pts1), np.float32(pts2), fundamental_matrix, imgSize=(w1, h1)
 	)
 
 	# Undistort (rectify) the images and save them
 	# Adapted from: https://stackoverflow.com/a/62607343
-	img1_rectified = cv.warpPerspective(img1, H1, (w1, h1))
-	img2_rectified = cv.warpPerspective(img2, H2, (w2, h2))
+	imgL_rectified = cv.warpPerspective(imgL, H1, (w1, h1))
+	imgR_rectified = cv.warpPerspective(imgR, H2, (w2, h2))
 
 	cv.namedWindow('imgL', cv.WINDOW_NORMAL)
 	cv.resizeWindow('imgL', (439, 331))
 	cv.namedWindow('imgR', cv.WINDOW_NORMAL)
 	cv.resizeWindow('imgR', (439, 331))
 
-	cv.imshow('imgL', img1_rectified)
-	cv.imshow('imgR', img2_rectified)
+	cv.imshow('imgL', imgL_rectified)
+	cv.imshow('imgR', imgR_rectified)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
-	# cv.imwrite("rectified_1.png", img1_rectified)
-	# cv.imwrite("rectified_2.png", img2_rectified)
+	# cv.imwrite("rectified_1.png", imgL_rectified)
+	# cv.imwrite("rectified_2.png", imgR_rectified)
 
 	# Draw the rectified images
 	# fig, axes = plt.subplots(1, 2, figsize=(15, 10))
-	# axes[0].imshow(img1_rectified, cmap="gray")
-	# axes[1].imshow(img2_rectified, cmap="gray")
+	# axes[0].imshow(imgL_rectified, cmap="gray")
+	# axes[1].imshow(imgR_rectified, cmap="gray")
 	# axes[0].axhline(250)
 	# axes[1].axhline(250)
 	# axes[0].axhline(450)
@@ -311,4 +305,4 @@ def image_rectify(img_left, img_right):
 	# plt.savefig("rectified_images.png")
 	# plt.show()
 
-	return img1_rectified, img2_rectified
+	return imgL_rectified, imgR_rectified
