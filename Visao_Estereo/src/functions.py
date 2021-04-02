@@ -5,6 +5,32 @@
 import cv2 as cv
 import numpy as np
 
+# Define a classe para a captura dos cliques
+class Capture_Click:
+    initial = ['', '']
+    final = ['', '']
+    clicks_number = int
+
+    def __init__(self, name):
+        cv.namedWindow(name, cv.WINDOW_GUI_NORMAL)
+        cv.setMouseCallback(name, self.click)
+        self.clicks_number = 0
+
+    def click(self, event, x, y, flags, param):
+		# Captura os cliques do lado esquerdo do mouse
+        if event == cv.EVENT_LBUTTONDOWN:
+            if self.clicks_number == 0:
+                self.initial[0] = x
+                self.initial[1] = y
+                self.clicks_number += 1
+                # Desenha o ponto capturado na imagem ou o escreve no terminal
+
+            elif self.clicks_number == 1:
+                self.final[0] = x
+                self.final[1] = y
+                self.clicks_number += 1
+                # Desenha o ponto capturado na imagem ou o escreve no terminal
+
 def data_reader(file_name):
 # Função para leitura de dados de calibração em arquivo .txt
 

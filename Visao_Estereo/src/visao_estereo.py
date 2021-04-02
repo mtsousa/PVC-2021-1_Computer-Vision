@@ -86,7 +86,36 @@ def second_requirement():
 	#f.world_coordinates(filteredImg, calib_data)
 
 def third_requirement():
-	pass
+	# Define o diretório anterior ao diretório do programa
+	base = os.path.abspath(os.path.dirname(__file__))
+	base_new = base.replace('\\src', '')
+
+	# Define os vetores da imagem e do caminho para a imagem
+	image = 'MorpheusR.jpg'
+	data = os.path.join(base_new, 'data', 'FurukawaPonce')
+
+	img = cv.imread(os.path.join(data, image))
+
+	dimensions = 3 # Trocar o valor da variável para 0 após implementar o calculo dos pontos
+	points = np.zeros((3,2))
+	click = f.Capture_Click('image')
+	result = []
+
+	cv.imshow('image', img)
+	while(dimensions < 3):
+		if click.clicks_number > 0 :
+			if click.clicks_number == 2:
+				# Calcula a distância entre os dois pontos capturados
+				# result = Recebe o valor calculado em mm
+				# points[dimensions] = pontos ajustados da caixa
+				click.clicks_number = 0
+				dimensions += 1
+				if dimensions == 3:
+					print("Box size result in mm: ", result, flush=True)
+					# Desenha a caixa na image do Morpheus	
+					# Verifica se quer desenha nova caixa
+					# Se sim, então dimensions = 0 e points.clear()
+	cv.waitKey(0)
 
 if __name__ == "__main__":
 	# Apenas uma ideia de interação com o usuário para definição do dado do projeto
