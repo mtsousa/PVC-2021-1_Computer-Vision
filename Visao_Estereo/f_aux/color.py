@@ -23,4 +23,5 @@ for i in range(len(data)):
     # Mostra imagem de disparidades com mapa de cores, padrão "jet"
     plt.imshow(img, cmap='jet')
     plt.colorbar()
+    plt.axis('off')
     plt.show()
