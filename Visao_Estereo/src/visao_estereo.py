@@ -29,8 +29,8 @@ def first_requirement():
 
 		calib_data = f.data_reader(os.path.join(data[i], 'calib.txt'))
 
-		min_disp = int(calib_data[8][0])
-		max_disp = int(calib_data[9][0])
+		min_disp = int(calib_data[24])
+		max_disp = int(calib_data[25])
 
 		print('Calculating disparity map...', flush=True)
 		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp)
@@ -62,6 +62,9 @@ def second_requirement():
 	imgL = cv.imread(os.path.join(data, images[0]), cv.IMREAD_GRAYSCALE)
 	imgR = cv.imread(os.path.join(data, images[1]), cv.IMREAD_GRAYSCALE)
 
+	calib_dataL = f.data_reader(os.path.join(data, 'MorpheusL.txt'))
+	calib_dataR = f.data_reader(os.path.join(data, 'MorpheusR.txt'))
+	
 	imgL = f.resize_image(imgL, imgR)
 	new_imgL, new_imgR = f.image_rectify(imgL, imgR)
 
@@ -80,6 +83,11 @@ def second_requirement():
 	#cv.imwrite(os.path.join(data[i],'disparidade.pgm'), filteredImg)
 
 	# Calcula o mapa de profundidade e o salva no diretório especificado
+	cam_translationL = [calib_dataL[14], calib_dataL[15], calib_dataL[16]]
+	cam_translationR = [calib_dataR[14], calib_dataR[15], calib_dataR[16]]
+	baseline = np.array(cam_translationL) - np.array(cam_translationR)
+
+	print('Baseline for MorpheusL image can be estimated as: ', np.linalg.norm(np.array(baseline)))
 	#print('Calculating depth map...', flush=True)
 	#f.image_depth(filteredImg, calib_data, os.path.join(data[i],'profundidade.png'))
 
