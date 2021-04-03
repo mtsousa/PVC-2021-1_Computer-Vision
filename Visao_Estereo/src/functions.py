@@ -42,25 +42,30 @@ def data_reader(file_name):
 
 	# Percorrer linhas separando termos relevantes para inserir na lista
 	for i in range(len(lines)):
-		clean_line = lines[i].replace('=', ' ').replace('[', '').replace(';', '').replace(']', '')
-		results = clean_line.split()
-		data.append(results)
 
-	# Remover strings que identificam o nome de cada variavel
-	for i in range(len(lines)):
-		del data[i][0]
+		clean_line = lines[i].replace('=', ' ').replace('[', '').replace(';', '').replace(']', '').replace(',', '')
+		str_results = clean_line.split()
 
+		for j in range(len(str_results)):
+
+			try : 
+				float(str_results[j])
+				data.append(float(str_results[j]))
+
+			except :
+				pass
+	
 	return data
 
 def world_coordinates (img, calib_data):
 # Função que utiliza dados de calibração das câmeras utilizadas para obter coordenadas 
 # 3D dos pontos no espaço
 
-	cx = float(calib_data[0][2])
-	cy = float(calib_data[0][5])
-	f = float(calib_data[0][0])
-	bline = float(calib_data[3][0])
-	doff = float(calib_data[2][0])
+	f = calib_data[0]
+	cx = calib_data[2]
+	cy = calib_data[5]
+	bline =calib_data[19]
+	doff = calib_data[18]
 
 	Q = np.float32([[1, 0, 0, -cx],
                     [0, 1, 0, -cy],
@@ -75,8 +80,8 @@ def image_depth (img, calib_data, save_dir):
 # Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
 # para os objetos na imagem
 
-	f = float(calib_data[0][0])
-	bline = float(calib_data[3][0])
+	f = calib_data[0]
+	bline = calib_data[19]
 	aux = np.zeros(img.shape)
 	img_float = aux + img
 	new_diff = img_float - aux
