@@ -76,12 +76,12 @@ def world_coordinates (img, calib_data):
 	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
 	world_coordinates = cv.reprojectImageTo3D(img, Q)
 
-def image_depth (img, calib_data, save_dir):
+def image_depth (img, focal, base_line, save_dir):
 # Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
 # para os objetos na imagem
 
-	f = calib_data[0]
-	bline = calib_data[19]
+	f = focal
+	bline = base_line
 	aux = np.zeros(img.shape)
 	img_float = aux + img
 	new_diff = img_float - aux
@@ -143,7 +143,7 @@ def disparity_calculator(left_image, right_image, min_num, max_num):
 def resize_image(imgL, imgR):
 # Função que redimensiona a imagem da esquerda
 
-    height, width = imgR.shape
+    height, width, _ = imgR.shape
     imgL = cv.resize(imgL, (width, height), interpolation = cv.INTER_LINEAR)
     return imgL
 
@@ -164,53 +164,23 @@ def extrinsic_matrix(R, Tc):
 				  [R[2,0], R[2,1], R[2,2], Tc[2]]])
     return Ext
 
-#def image_rectify(img_left, img_right):
-		
-	# fc = [[6704.926882, 6705.241311], [6682.125964, 6681.475962]] 
-	# cc = [[738.251932, 457.560286], [875.207200, 357.700292]]
-	# alpha = [0.000103, 0.000101]
-	# rotate_L = np.asarray([[0.70717199,  0.70613396, -0.03581348],
-	# 				[0.28815232, -0.33409066, -0.89741388], 
-	# 				[-0.64565936,  0.62430623, -0.43973369]])
-	# transl_L = np.array([-532.285900, 207.183600, 2977.408000])
-
-	# rotate_R = np.asarray([[0.48946344,  0.87099159, -0.04241701], 
-	# 				[0.33782142, -0.23423702, -0.91159734], 
-	# 				[-0.80392924,  0.43186419, -0.40889007]])
-	# transl_R = np.array([-614.549000, 193.240700, 3242.754000])
-
-	# matrixK_L = intrinsic_matrix(fc[0], cc[0], alpha[0])
-	# matrixK_R = intrinsic_matrix(fc[1], cc[1], alpha[1])
-
-	# matrix_ext_L = extrinsic_matrix(rotate_L, transl_L)
-	# matrix_ext_R = extrinsic_matrix(rotate_R, transl_R)
-
-	# matrixP_L = np.matmul(matrixK_L, matrix_ext_L)
-	# matrixP_R = np.matmul(matrixK_R, matrix_ext_R)
-	
-	# h, w = img_left.shape
-
-	# mapL = cv.initUndistortRectifyMap(matrixK_L, (0,0,0,0,0), rotate_L, matrixP_L, (w,h), cv.CV_16SC2)
-	# mapR = cv.initUndistortRectifyMap(matrixK_R, (0,0,0,0,0), rotate_R, matrixP_R, (w,h), cv.CV_16SC2)
-
-	# inter = cv.INTER_LANCZOS4
-	# return cv.remap(img_left, mapL[0], mapL[1], inter), cv.remap(img_right, mapR[0], mapR[1], inter)
-
 # Visualize epilines
 # Adapted from: https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
 def drawlines(img1src, lines, pts1src):
-	''' img1 - image on which we draw the epilines for the points in img2
-		lines - corresponding epilines '''
-	r, c = img1src.shape
-	img1color = cv.cvtColor(img1src, cv.COLOR_GRAY2BGR)
+
+	r, c, _ = img1src.shape
+	img1color = img1src.copy()
 	# Edit: use the same random seed so that two images are comparable!
 	np.random.seed(0)
+	i = 0
 	for r, pt1 in zip(lines, pts1src):
 		color = tuple(np.random.randint(0, 255, 3).tolist())
 		x0, y0 = map(int, [0, -r[2]/r[1]])
 		x1, y1 = map(int, [c, -(r[2]+r[0]*c)/r[1]])
-		img1color = cv.line(img1color, (x0, y0), (x1, y1), color, 3)
-		img1color = cv.circle(img1color, tuple(pt1), 5, color, 1)
+		if i%6 == 0:
+			img1color = cv.line(img1color, (x0, y0), (x1, y1), color, 3)
+		img1color = cv.circle(img1color, tuple(pt1), 5, color, 5)
+		i += 1
 	return img1color
 
 def image_rectify(imgL, imgR):
@@ -257,19 +227,6 @@ def image_rectify(imgL, imgR):
 			pts2.append(kp2[m.trainIdx].pt)
 			pts1.append(kp1[m.queryIdx].pt)
 
-	# Draw the keypoint matches between both pictures
-	# Still based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
-	# draw_params = dict(matchColor=(0, 255, 0),
-					# singlePointColor=(255, 0, 0),
-					# matchesMask=matchesMask[300:500],
-					# flags=cv.DrawMatchesFlags_DEFAULT)
-
-	# keypoint_matches = cv.drawMatchesKnn(
-	# 	imgL, kp1, imgR, kp2, matches[300:500], None, **draw_params)
-	
-	# ------------------------------------------------------------
-	# STEREO RECTIFICATION
-
 	# Calculate the fundamental matrix for the cameras
 	# https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
 	pts1 = np.int32(pts1)
@@ -294,32 +251,32 @@ def image_rectify(imgL, imgR):
 	lines2 = lines2.reshape(-1, 3)
 	line_imgR = drawlines(imgR, lines2, pts2)
 
-	cv.namedWindow(imgL_name, cv.WINDOW_NORMAL)
-	cv.resizeWindow(imgL_name, (439, 331))
-	cv.namedWindow(imgR_name, cv.WINDOW_NORMAL)
-	cv.resizeWindow(imgR_name, (439, 331))
+	cv.namedWindow('left epipolar lines', cv.WINDOW_NORMAL)
+	cv.resizeWindow('left epipolar lines', (439, 331))
+	cv.namedWindow('right epipolar lines', cv.WINDOW_NORMAL)
+	cv.resizeWindow('right epipolar lines', (439, 331))
 
-	cv.imshow(imgL_name, line_imgL)
-	cv.imshow(imgR_name, line_imgR)
+	cv.imshow('left epipolar lines', line_imgL)
+	cv.imshow('right epipolar lines', line_imgR)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
 	# Stereo rectification (uncalibrated variant)
 	# Adapted from: https://stackoverflow.com/a/62607343
-	h1, w1 = imgL.shape
-	h2, w2 = imgR.shape
+	h1, w1, _ = imgL.shape
+	h2, w2, _ = imgR.shape
 	_, H1, H2 = cv.stereoRectifyUncalibrated(
 		np.float32(pts1), np.float32(pts2), fundamental_matrix, imgSize=(w1, h1)
 	)
 
 	# Undistort (rectify) the images and save them
 	# Adapted from: https://stackoverflow.com/a/62607343
-	imgL_rectified = cv.warpPerspective(imgL, H1, (w1, h1))
-	imgR_rectified = cv.warpPerspective(imgR, H2, (w2, h2))
+	imgL_rectified = cv.warpPerspective(imgL, H1, (w1, h1), cv.BORDER_ISOLATED)
+	imgR_rectified = cv.warpPerspective(imgR, H2, (w2, h2), cv.BORDER_ISOLATED)
 
 	y = 58
 	x = 58
-	h, w = imgR_rectified.shape
+	h, w, _ = imgR_rectified.shape
 	crop_imgR = imgR_rectified[y:h-y, x:w-x]
 	crop_imgL = imgL_rectified[y:h-y, x:w-x]
 
@@ -328,8 +285,8 @@ def image_rectify(imgL, imgR):
 	cv.namedWindow(imgR_name, cv.WINDOW_NORMAL)
 	cv.resizeWindow(imgR_name, (439, 331))
 
-	cv.imshow(imgL_name, crop_imgL)
-	cv.imshow(imgR_name, crop_imgR)
+	cv.imshow(imgL_name, imgL_rectified)
+	cv.imshow(imgR_name, imgR_rectified)
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
@@ -338,16 +295,7 @@ def image_rectify(imgL, imgR):
 	# cv.imwrite("cropped_imgL.jpg", crop_imgL)
 	# cv.imwrite("cropped_imgR.jpg", crop_imgR)
 
-	# Draw the rectified images
-	# fig, axes = plt.subplots(1, 2, figsize=(15, 10))
-	# axes[0].imshow(imgL_rectified, cmap="gray")
-	# axes[1].imshow(imgR_rectified, cmap="gray")
-	# axes[0].axhline(250)
-	# axes[1].axhline(250)
-	# axes[0].axhline(450)
-	# axes[1].axhline(450)
-	# plt.suptitle("Rectified images")
-	# plt.savefig("rectified_images.png")
-	# plt.show()
+	crop_imgR = cv.cvtColor(crop_imgR, cv.COLOR_BGR2GRAY)
+	crop_imgL = cv.cvtColor(crop_imgL, cv.COLOR_BGR2GRAY)
 
-	return crop_imgL, crop_imgR#imgL_rectified, imgR_rectified
+	return crop_imgL, crop_imgR

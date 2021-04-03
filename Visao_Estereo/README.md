@@ -14,3 +14,12 @@
      - cv2 (contrib version) 
      - numpy  
      - os
+
+### To install opencv contrib version with pip installer run the command:
+>pip install opencv-contrib-python
+
+### To evaluate the requeriments run the command:
+- For Windows users:
+>python src/visao_stereo.py
+- For Linux users:
+>python3 src/visao_stereo.py

@@ -9,18 +9,19 @@ else:
     base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
-images = ['im0.png', 'im1.png', 'rectified_1.jpg', 'rectified_2.jpg']
+images = ['im0.png', 'im1.png', 'cropped_imgL.jpg', 'cropped_imgR.jpg']
+# images = ['im0.png', 'im1.png', 'cropped_imgR.jpg', 'cropped_imgL.jpg']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
         os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect'),
-        os.path.join(base_new, 'data', 'Futukawa')]
+        os.path.join(base_new, 'data', 'FurukawaPonce')]
 
-imgL = cv.imread(os.path.join(data[2], images[2]), 0)#cv.COLOR_BGR2GRAY)
-imgR = cv.imread(os.path.join(data[2], images[3]), 0)#cv.COLOR_BGR2GRAY)
+imgL = cv.imread(os.path.join(data[2], images[2]), cv.IMREAD_GRAYSCALE)
+imgR = cv.imread(os.path.join(data[2], images[3]), cv.IMREAD_GRAYSCALE)
 #stereo = cv.StereoBM_create(numDisparities=16*29, blockSize=15)
 
 win_size = 3
 min_disp = 0
-max_disp = 16*17 #16*41
+max_disp = 16*3
 num_disp = max_disp - min_disp  # Needs to be divisible by 16
 left_matcher = cv.StereoSGBM_create(
     minDisparity=min_disp,
@@ -29,9 +30,10 @@ left_matcher = cv.StereoSGBM_create(
     uniquenessRatio=10,
     speckleWindowSize=10,
     speckleRange=2,
-    disp12MaxDiff=300, #640,
-    P1=8*3*win_size**2,
-    P2=32*3*win_size**2,
+    disp12MaxDiff=-1,
+    P1=8*3*win_size,
+    P2=32*3*win_size,
+    preFilterCap=63,
     mode=cv.STEREO_SGBM_MODE_SGBM_3WAY
 )
 
