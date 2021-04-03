@@ -4,6 +4,7 @@
 
 import cv2 as cv
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Define a classe para a captura dos cliques
 class Capture_Click:
@@ -147,22 +148,27 @@ def resize_image(imgL, imgR):
     imgL = cv.resize(imgL, (width, height), interpolation = cv.INTER_LINEAR)
     return imgL
 
-def intrinsic_matrix(focal_length, princPoint, skew):
+def intrinsic_matrix(calib):
     K = np.zeros((3,3))
-    K[0,0] = focal_length[0]
-    K[0,1] = skew
-    K[0,2] = princPoint[0]
-    K[1,1] = focal_length[1]
-    K[1,2] = princPoint[1]
+    K[0,0] = calib[0]
+    K[0,1] = calib[4]
+    K[0,2] = calib[2]
+    K[1,1] = calib[1]
+    K[1,2] = calib[3]
     K[2,2] = 1
     return K
 
-def extrinsic_matrix(R, Tc):
-    Ext = np.zeros((3,4))
-    Ext = np.array([[R[0,0], R[0,1], R[0,2], Tc[0]], 
-				  [R[1,0], R[1,1], R[1,2], Tc[1]],
-				  [R[2,0], R[2,1], R[2,2], Tc[2]]])
-    return Ext
+def extrinsic_parameters(calib):
+    r_vec = np.zeros((3,3))
+    t_vec = np.zeros((3,1))
+    r_vec = np.array([[calib[5], calib[6], calib[7]], 
+				     [calib[8], calib[9], calib[10]],
+		             [calib[11], calib[12], calib[13]]])
+    t_vec = np.array([[calib[14]],
+					 [calib[15]],	
+					 [calib[16]]])
+    
+    return r_vec, t_vec
 
 # Visualize epilines
 # Adapted from: https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
@@ -207,7 +213,7 @@ def image_rectify(imgL, imgR):
 	# Based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
 	FLANN_INDEX_KDTREE = 1
 	index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-	search_params = dict(checks=80)   # or pass empty dictionary
+	search_params = dict(checks=20)   # or pass empty dictionary
 	flann = cv.FlannBasedMatcher(index_params, search_params)
 	matches = flann.knnMatch(des1, des2, k=2)
 
@@ -220,7 +226,7 @@ def image_rectify(imgL, imgR):
 	pts2 = []
 
 	for i, (m, n) in enumerate(matches):
-		if m.distance < 0.6*n.distance:
+		if m.distance < 0.5*n.distance:
 			# Keep this keypoint pair
 			matchesMask[i] = [1, 0]
 			good.append(m)
@@ -299,3 +305,26 @@ def image_rectify(imgL, imgR):
 	crop_imgL = cv.cvtColor(crop_imgL, cv.COLOR_BGR2GRAY)
 
 	return crop_imgL, crop_imgR
+
+def calculate_baseline(calibL, calibR):
+	r_vecL, t_vecL = extrinsic_parameters(calibL)
+	r_vecR, t_vecR = extrinsic_parameters(calibR)
+	
+	newR_vecL = np.zeros((1,3))
+	newR_vecR = np.zeros((1,3))
+
+	newt_vecL = newR_vecL
+	newt_vecR = newR_vecR
+
+	newt_vecL = np.array([t_vecL[0], t_vecL[1], t_vecL[2]])
+	newt_vecR = np.array([t_vecR[0], t_vecR[1], t_vecR[2]])
+
+	newR_vecL, _ = cv.Rodrigues(r_vecL)
+	newR_vecR, _ = cv.Rodrigues(r_vecR)
+
+	rvec, tvec, _, _, _, _, _, _, _, _, = cv.composeRT(newR_vecL.ravel(), newt_vecL.ravel(), newR_vecR.ravel(), newt_vecR.ravel())
+	
+	print('vet_rot: \n', rvec, flush=True)
+	baseline = np.linalg.norm(tvec)
+
+	return baseline

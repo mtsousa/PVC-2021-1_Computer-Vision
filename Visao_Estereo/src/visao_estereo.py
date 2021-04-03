@@ -93,6 +93,10 @@ def second_requirement():
 	focal_length = (calib_dataL[0] + calib_dataL[1])/2
 
 	print('Baseline for MorpheusL image can be estimated as: ', base_line, flush=True)
+	
+	baseline = f.calculate_baseline(calib_dataL, calib_dataR)
+	print('Minha baseline: ', baseline, flush=True)
+	
 	print('Calculating depth map...', flush=True)
 	f.image_depth(filteredImg, focal_length, base_line, os.path.join(data,'profundidade.png'))
 
