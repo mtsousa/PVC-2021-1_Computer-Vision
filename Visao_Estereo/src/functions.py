@@ -306,25 +306,97 @@ def image_rectify(imgL, imgR):
 
 	return crop_imgL, crop_imgR
 
-def calculate_baseline(calibL, calibR):
+def calculate_relative(calibL, calibR):
+# Compute the relative rotation and translation between the cameras
+# Based on opencv tutorial: https://docs.opencv.org/master/d9/dab/tutorial_homography.html
+
 	r_vecL, t_vecL = extrinsic_parameters(calibL)
 	r_vecR, t_vecR = extrinsic_parameters(calibR)
 	
-	newR_vecL = np.zeros((1,3))
-	newR_vecR = np.zeros((1,3))
+	r_vecL_transp = np.transpose(r_vecL)
+	r_diff = np.matmul(r_vecR, r_vecL_transp)
+	t_diff = np.matmul(r_vecR, np.matmul(-r_vecL_transp, t_vecL)) + t_vecR
 
-	newt_vecL = newR_vecL
-	newt_vecR = newR_vecR
+	# Based on stack overflow question: https://stackoverflow.com/questions/38737960/finding-relative-rotation-between-two-cameras
+	# r_vecL_inv = np.linalg.inv(r_vecL)
+	# r_diff = np.matmul(r_vecL_inv, r_vecR)
+	# t_diff = np.matmul(r_vecL, (t_vecR - t_vecL))
 
-	newt_vecL = np.array([t_vecL[0], t_vecL[1], t_vecL[2]])
-	newt_vecR = np.array([t_vecR[0], t_vecR[1], t_vecR[2]])
+	# Show the baseline between the the cameras
+	baseline = np.linalg.norm(t_diff)
+	print('Baseline: ', baseline, flush=True)
 
-	newR_vecL, _ = cv.Rodrigues(r_vecL)
-	newR_vecR, _ = cv.Rodrigues(r_vecR)
+	return r_diff, t_diff
 
-	rvec, tvec, _, _, _, _, _, _, _, _, = cv.composeRT(newR_vecL.ravel(), newt_vecL.ravel(), newR_vecR.ravel(), newt_vecR.ravel())
+def rectify_images(imgL, imgR, calibL, calibR):
+# Function to rectify the images
+
+	# Calculate the instrinsic matrix
+	matrixK_L = intrinsic_matrix(calibL)
+	matrixK_R = intrinsic_matrix(calibR)
+
+	# Calculate the rotation and translation vector relative
+	r_vecL, t_vecL = extrinsic_parameters(calibL)
+	r_vecR, t_vecR = extrinsic_parameters(calibR)
 	
-	print('vet_rot: \n', rvec, flush=True)
-	baseline = np.linalg.norm(tvec)
+	extrinsic_L = np.column_stack((r_vecL, t_vecL))
+	extrinsic_R = np.column_stack((r_vecR, t_vecR))
 
-	return baseline
+	# matrixP_L = np.matmul(matrixK_L, extrinsic_L)
+	# matrixP_R = np.matmul(matrixK_R, extrinsic_R)
+
+	R, T = calculate_relative(calibL, calibR)
+
+	# Manipulate the cx parameter to control image crop
+	# Based on: https://stackoverflow.com/questions/53701924/how-can-you-rectify-cropped-stereo-images-in-opencv	
+	matrixK_R[0][2] = matrixK_R[0][2]/1000
+	matrixK_L[0][2] = 2*matrixK_L[0][2]
+
+	h, w, _ = imgL.shape
+	# Calculate new parameters of rotation and projection
+	# https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga617b1685d4059c6040827800e72ad2b6
+	R1, R2, P1, P2, Q, Roi1, Roi2 = cv.stereoRectify(matrixK_L, None, matrixK_R, None, (h, w), R, T)
+	
+	diagonal = int(np.sqrt(imgL.shape[1]**2 + imgL.shape[0]**2))
+	black_img = np.uint8(np.full((diagonal, diagonal, 3), 0))
+
+	yoff = round((diagonal-imgL.shape[0])/2)
+	xoff = round((diagonal-imgL.shape[1])/2)
+
+	# Attempt to rotate without cropping
+	# Based on: https://stackoverflow.com/questions/30719870/rotate-image-without-cropping-opencv/30723799
+	# use numpy indexing to place the resized image in the center of black image
+	# result = black_img.copy()
+	# result2 = black_img.copy()
+	# result[yoff:yoff+imgL.shape[0], xoff:xoff+imgL.shape[1]] = imgL
+	# result2[yoff:yoff+imgL.shape[0], xoff:xoff+imgL.shape[1]] = imgR
+	
+	# cv.namedWindow('black', cv.WINDOW_NORMAL)
+	# cv.resizeWindow('black', (600, 500))
+	# cv.imshow('black', result)
+	# cv.waitKey(0)
+	# cv.destroyAllWindows()
+
+	# new_camera_L, roi = cv.getOptimalNewCameraMatrix(matrixK_L, 0, (1200,1200), 1)
+	# new_camera_R, roi = cv.getOptimalNewCameraMatrix(matrixK_R, 0, (1200,1200), 1)
+
+	# Computes the undistortion and rectification transformation map
+	# https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a
+	mapL = cv.initUndistortRectifyMap(matrixK_L, None, R1, P1, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
+	mapR = cv.initUndistortRectifyMap(matrixK_R, None, R2, P2, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
+
+	# Remap the images
+	new_imgL = cv.remap(imgL, mapL[0], mapL[1], cv.INTER_LANCZOS4)
+	new_imgR = cv.remap(imgR, mapR[0], mapR[1], cv.INTER_LANCZOS4)
+
+	cv.namedWindow('imgL_name', cv.WINDOW_NORMAL)
+	cv.resizeWindow('imgL_name', (439, 331))
+	cv.namedWindow('imgR_name', cv.WINDOW_NORMAL)
+	cv.resizeWindow('imgR_name', (439, 331))
+
+	cv.imshow('imgL_name', new_imgL)
+	cv.imshow('imgR_name', new_imgR)
+	cv.waitKey(0)
+	cv.destroyAllWindows()
+
+	return new_imgL, new_imgR
