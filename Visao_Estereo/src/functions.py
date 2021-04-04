@@ -4,7 +4,6 @@
 
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Define a classe para a captura dos cliques
 class Capture_Click:
@@ -77,7 +76,7 @@ def world_coordinates (img, calib_data):
 	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
 	world_coordinates = cv.reprojectImageTo3D(img, Q)
 
-def image_depth (img, focal, base_line, save_dir):
+def image_depth (img, focal, base_line, save_dir, center_l, center_r):
 # Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
 # para os objetos na imagem
 
@@ -87,8 +86,9 @@ def image_depth (img, focal, base_line, save_dir):
 	img_float = aux + img
 	new_diff = img_float - aux
 	new_diff[new_diff == 0.0] = np.inf
+	doff = abs(center_l - center_r)
 	
-	Z = bline * f / new_diff
+	Z = bline * f / (new_diff + doff)
 	filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX)
 	filtered_depth_image = np.uint8(filtered_depth_image)
 	filtered_depth_image[filtered_depth_image == 0] = 255
@@ -105,14 +105,13 @@ def image_depth (img, focal, base_line, save_dir):
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
 
-def disparity_calculator(left_image, right_image, min_num, max_num):
+def disparity_calculator(left_image, right_image, min_num, max_num, window_size, block):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
-	window_size = 3
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
 	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
-	    blockSize = window_size,
+	    blockSize = block,
 	    P1 = 8*3*window_size,
 	    P2 = 32*3*window_size,
 	    disp12MaxDiff = -1, # Desabilitado 
@@ -142,7 +141,7 @@ def disparity_calculator(left_image, right_image, min_num, max_num):
 	return filteredImg
 
 def resize_image(imgL, imgR):
-# Função que redimensiona a imagem da esquerda
+# Function to resize the images
 
     height, width, _ = imgR.shape
     imgL = cv.resize(imgL, (width, height), interpolation = cv.INTER_LINEAR)
@@ -347,11 +346,6 @@ def rectify_images(imgL, imgR, calibL, calibR):
 
 	R, T = calculate_relative(calibL, calibR)
 
-	# Manipulate the cx parameter to control image crop
-	# Based on: https://stackoverflow.com/questions/53701924/how-can-you-rectify-cropped-stereo-images-in-opencv	
-	matrixK_R[0][2] = matrixK_R[0][2]/1000
-	matrixK_L[0][2] = 2*matrixK_L[0][2]
-
 	h, w, _ = imgL.shape
 	# Calculate new parameters of rotation and projection
 	# https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga617b1685d4059c6040827800e72ad2b6
@@ -377,13 +371,22 @@ def rectify_images(imgL, imgR, calibL, calibR):
 	# cv.waitKey(0)
 	# cv.destroyAllWindows()
 
-	# new_camera_L, roi = cv.getOptimalNewCameraMatrix(matrixK_L, 0, (1200,1200), 1)
-	# new_camera_R, roi = cv.getOptimalNewCameraMatrix(matrixK_R, 0, (1200,1200), 1)
+	new_camera_L, roi = cv.getOptimalNewCameraMatrix(matrixK_L, 0, (1200,1200), 1)
+	new_camera_R, roi = cv.getOptimalNewCameraMatrix(matrixK_R, 0, (1200,1200), 1)
+
+	# Manipulate the cx and cy parameters to control image crop
+	# Based on: https://stackoverflow.com/questions/53701924/how-can-you-rectify-cropped-stereo-images-in-opencv	
+	matrixK_R[0][2] = matrixK_R[0][2]/10000
+	matrixK_L[0][2] = 2.25*matrixK_L[0][2]
+	matrixK_L[1][2] = 1.1*matrixK_R[1][2]
+	matrixK_R[1][2] = 0.765*matrixK_R[1][2]
+
+	#print(abs(matrixK_L[0][2]-matrixK_R[0][2]))
 
 	# Computes the undistortion and rectification transformation map
 	# https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a
 	mapL = cv.initUndistortRectifyMap(matrixK_L, None, R1, P1, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
-	mapR = cv.initUndistortRectifyMap(matrixK_R, None, R2, P2, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
+	mapR = cv.initUndistortRectifyMap(matrixK_R, None, R2, P2, (imgR.shape[1], imgR.shape[0]), cv.CV_16SC2)
 
 	# Remap the images
 	new_imgL = cv.remap(imgL, mapL[0], mapL[1], cv.INTER_LANCZOS4)
@@ -399,4 +402,4 @@ def rectify_images(imgL, imgR, calibL, calibR):
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
-	return new_imgL, new_imgR
+	return new_imgL, new_imgR, np.linalg.norm(T)

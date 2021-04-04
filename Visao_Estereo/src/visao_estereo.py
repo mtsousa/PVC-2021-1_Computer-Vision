@@ -33,7 +33,9 @@ def first_requirement():
 		max_disp = int(calib_data[25])
 
 		print('Calculating disparity map...', flush=True)
-		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp)
+		window_size = 3
+		block = 3
+		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp, window_size, block)
 		
 		# Redimensiona a imagem para uma melhor visualização
 		cv.namedWindow('filtered', cv.WINDOW_NORMAL)
@@ -47,9 +49,11 @@ def first_requirement():
 
 		focal_length = calib_data[0]
 		base_line = calib_data[19]
+		center_l = calib_data[2]
+		center_r = calib_data[2]
 		# Calcula o mapa de profundidade e o salva no diretório especificado
 		print('Calculating depth map...', flush=True)
-		f.image_depth(filteredImg, focal_length, base_line, os.path.join(data[i],'profundidade.png'))
+		f.image_depth(filteredImg, focal_length, base_line, os.path.join(data[i],'profundidade.png'), center_l, center_r)
 
 def second_requirement():
 	# Define o diretório anterior ao diretório do programa
@@ -67,16 +71,17 @@ def second_requirement():
 	calib_dataL = f.data_reader(os.path.join(data, 'MorpheusL.txt'))
 	calib_dataR = f.data_reader(os.path.join(data, 'MorpheusR.txt'))
 		
-	imgL = f.resize_image(imgL, imgR)
-	new_imgL, new_imgR = f.image_rectify(imgL, imgR)
+	# imgL = f.resize_image(imgL, imgR)
+	# new_imgL, new_imgR = f.image_rectify(imgL, imgR)
+	imgR = f.resize_image(imgR, imgL)
 
-	new_imgL, new_imgR = f.rectify_images(imgL, imgR, calib_dataL, calib_dataR)
-	
-	# new_imgL, new_imgR = f.image_rectify(new_imgL, new_imgR)
+	new_imgL, new_imgR, base_line = f.rectify_images(imgL, imgR, calib_dataL, calib_dataR)
 
 	# Calcula o mapa de disparidade e de profundidade
 	print('Calculating disparity map...', flush=True)
-	filteredImg = f.disparity_calculator(new_imgL, new_imgR, 0, 16*4)
+	window_size = 15**2 # Valor maior que o valor do block ao quadrado
+	block = 3 # Valores entre [1, 3, 5]
+	filteredImg = f.disparity_calculator(new_imgL, new_imgR, 0, 16*4, window_size, block)
 
 	# Redimensiona a imagem para uma melhor visualização
 	cv.namedWindow('filtered', cv.WINDOW_NORMAL)
@@ -93,13 +98,15 @@ def second_requirement():
 	cam_translationR = [calib_dataR[14], calib_dataR[15], calib_dataR[16]]
 
 	diff_vec = np.array(cam_translationL) - np.array(cam_translationR)
-	base_line = np.linalg.norm(np.array(diff_vec))
+	baseline = np.linalg.norm(np.array(diff_vec))
 	focal_length = (calib_dataL[0] + calib_dataL[1])/2
+	center_l = calib_dataL[2]
+	center_r = calib_dataR[2]
 
-	print('Baseline for MorpheusL image can be estimated as: ', base_line, flush=True)
+	print('Baseline for MorpheusL image can be estimated as: ', baseline, flush=True)
 	
 	#print('Calculating depth map...', flush=True)
-	f.image_depth(filteredImg, focal_length, base_line, os.path.join(data,'profundidade.png'))
+	f.image_depth(filteredImg, focal_length, base_line, os.path.join(data,'profundidade.png'), center_l, center_r)
 
 	#f.world_coordinates(filteredImg, calib_data)
 
