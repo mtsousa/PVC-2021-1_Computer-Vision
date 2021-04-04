@@ -9,8 +9,8 @@ else:
     base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
-images = ['im0.png', 'im1.png', 'cropped_imgL.jpg', 'cropped_imgR.jpg']
-# images = ['im0.png', 'im1.png', 'cropped_imgR.jpg', 'cropped_imgL.jpg']
+images = ['im0.png', 'im1.png', 'rectifiedL.jpg', 'rectifiedR.jpg']
+# images = ['im0.png', 'im1.png', 'rectifiedR.jpg', 'rectifiedL.jpg']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
         os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect'),
         os.path.join(base_new, 'data', 'FurukawaPonce')]
@@ -19,14 +19,15 @@ imgL = cv.imread(os.path.join(data[2], images[2]), cv.IMREAD_GRAYSCALE)
 imgR = cv.imread(os.path.join(data[2], images[3]), cv.IMREAD_GRAYSCALE)
 #stereo = cv.StereoBM_create(numDisparities=16*29, blockSize=15)
 
-win_size = 3
-min_disp = 0
-max_disp = 16*3
+win_size = 15**2
+block = 5
+min_disp = -8
+max_disp = 16*4
 num_disp = max_disp - min_disp  # Needs to be divisible by 16
 left_matcher = cv.StereoSGBM_create(
     minDisparity=min_disp,
-    numDisparities=num_disp,
-    blockSize=win_size,
+    numDisparities=max_disp,
+    blockSize=block,
     uniquenessRatio=10,
     speckleWindowSize=10,
     speckleRange=2,
@@ -64,6 +65,8 @@ norm_image = cv.normalize(disparity, None, 0, 255, cv.NORM_MINMAX).astype(np.uin
 cv.namedWindow('image1', cv.WINDOW_NORMAL)
 cv.resizeWindow('image1', (439, 331))
 cv.imshow('image1', norm_image)
+
+# filteredImg = cv.GaussianBlur(filteredImg, (5,5), 5, None, 5)
 
 cv.namedWindow('image2', cv.WINDOW_NORMAL)
 cv.resizeWindow('image2', (439, 331))

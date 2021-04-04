@@ -76,7 +76,7 @@ def world_coordinates (img, calib_data):
 	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
 	world_coordinates = cv.reprojectImageTo3D(img, Q)
 
-def image_depth (img, focal, base_line, save_dir, center_l, center_r):
+def image_depth (img, focal, base_line, save_dir, center_l, center_r, req):
 # Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
 # para os objetos na imagem
 
@@ -93,14 +93,15 @@ def image_depth (img, focal, base_line, save_dir, center_l, center_r):
 	filtered_depth_image = np.uint8(filtered_depth_image)
 	filtered_depth_image[filtered_depth_image == 0] = 255
 
+	if req != 3:
 	# Redimensiona a imagem para uma melhor visualização
-	cv.namedWindow('DepthMap', cv.WINDOW_NORMAL)
-	cv.resizeWindow('DepthMap', (439, 331))
+		cv.namedWindow('DepthMap', cv.WINDOW_NORMAL)
+		cv.resizeWindow('DepthMap', (439, 331))
 
-	cv.imshow('DepthMap', filtered_depth_image)
-	cv.imwrite(save_dir, filtered_depth_image)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
+		cv.imshow('DepthMap', filtered_depth_image)
+		cv.imwrite(save_dir, filtered_depth_image)
+		cv.waitKey(0)
+		cv.destroyAllWindows()
 	# Podemos mapear os valores da imagem de profundidade de volta para unidades em milímetros
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
@@ -212,7 +213,7 @@ def image_rectify(imgL, imgR):
 	# Based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
 	FLANN_INDEX_KDTREE = 1
 	index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-	search_params = dict(checks=20)   # or pass empty dictionary
+	search_params = dict(checks=80)   # or pass empty dictionary
 	flann = cv.FlannBasedMatcher(index_params, search_params)
 	matches = flann.knnMatch(des1, des2, k=2)
 
@@ -231,6 +232,21 @@ def image_rectify(imgL, imgR):
 			good.append(m)
 			pts2.append(kp2[m.trainIdx].pt)
 			pts1.append(kp1[m.queryIdx].pt)
+
+	# Draw the keypoint matches between both pictures
+	# Still based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
+	draw_params = dict(matchColor=(0, 255, 0),
+					singlePointColor=(255, 0, 0),
+					matchesMask=matchesMask[300:500],
+					flags=cv.DrawMatchesFlags_DEFAULT)
+
+	keypoint_matches = cv.drawMatchesKnn(
+		imgL, kp1, imgR, kp2, matches[300:500], None, **draw_params)
+	cv.namedWindow('Keypoint matches', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Keypoint matches', (500,600))
+	cv.imshow("Keypoint matches", keypoint_matches)
+	cv.waitKey(0)
+	cv.destroyAllWindows()
 
 	# Calculate the fundamental matrix for the cameras
 	# https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
@@ -303,7 +319,7 @@ def image_rectify(imgL, imgR):
 	crop_imgR = cv.cvtColor(crop_imgR, cv.COLOR_BGR2GRAY)
 	crop_imgL = cv.cvtColor(crop_imgL, cv.COLOR_BGR2GRAY)
 
-	return crop_imgL, crop_imgR
+	return imgL_rectified, imgR_rectified
 
 def calculate_relative(calibL, calibR):
 # Compute the relative rotation and translation between the cameras
@@ -327,7 +343,7 @@ def calculate_relative(calibL, calibR):
 
 	return r_diff, t_diff
 
-def rectify_images(imgL, imgR, calibL, calibR):
+def rectify_images(imgL, imgR, calibL, calibR, req):
 # Function to rectify the images
 
 	# Calculate the instrinsic matrix
@@ -364,15 +380,6 @@ def rectify_images(imgL, imgR, calibL, calibR):
 	# result2 = black_img.copy()
 	# result[yoff:yoff+imgL.shape[0], xoff:xoff+imgL.shape[1]] = imgL
 	# result2[yoff:yoff+imgL.shape[0], xoff:xoff+imgL.shape[1]] = imgR
-	
-	# cv.namedWindow('black', cv.WINDOW_NORMAL)
-	# cv.resizeWindow('black', (600, 500))
-	# cv.imshow('black', result)
-	# cv.waitKey(0)
-	# cv.destroyAllWindows()
-
-	new_camera_L, roi = cv.getOptimalNewCameraMatrix(matrixK_L, 0, (1200,1200), 1)
-	new_camera_R, roi = cv.getOptimalNewCameraMatrix(matrixK_R, 0, (1200,1200), 1)
 
 	# Manipulate the cx and cy parameters to control image crop
 	# Based on: https://stackoverflow.com/questions/53701924/how-can-you-rectify-cropped-stereo-images-in-opencv	
@@ -392,14 +399,21 @@ def rectify_images(imgL, imgR, calibL, calibR):
 	new_imgL = cv.remap(imgL, mapL[0], mapL[1], cv.INTER_LANCZOS4)
 	new_imgR = cv.remap(imgR, mapR[0], mapR[1], cv.INTER_LANCZOS4)
 
-	cv.namedWindow('imgL_name', cv.WINDOW_NORMAL)
-	cv.resizeWindow('imgL_name', (439, 331))
-	cv.namedWindow('imgR_name', cv.WINDOW_NORMAL)
-	cv.resizeWindow('imgR_name', (439, 331))
+	if req != 3:
+		cv.namedWindow('rectified imgL', cv.WINDOW_NORMAL)
+		cv.resizeWindow('rectified imgL', (439, 331))
+		cv.namedWindow('rectified imgR', cv.WINDOW_NORMAL)
+		cv.resizeWindow('rectified imgR', (439, 331))
 
-	cv.imshow('imgL_name', new_imgL)
-	cv.imshow('imgR_name', new_imgR)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
+		cv.imshow('rectified imgL', new_imgL)
+		cv.imshow('rectified imgR', new_imgR)
+		cv.waitKey(0)
+		cv.destroyAllWindows()
+
+	# cv.imwrite('rectifiedL.jpg', new_imgL)
+	# cv.imwrite('rectifiedR.jpg', new_imgR)
+
+	new_imgL = cv.cvtColor(new_imgL, cv.COLOR_BGR2GRAY)
+	new_imgR = cv.cvtColor(new_imgR, cv.COLOR_BGR2GRAY)
 
 	return new_imgL, new_imgR, np.linalg.norm(T)
