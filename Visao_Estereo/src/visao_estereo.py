@@ -22,7 +22,7 @@ def first_requirement():
 			os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
 	name = ['Jadeplant', 'Playtable']
 
-	for i in [0,1]:
+	for i in range (len(name)):
 		print('\nLoading images from ' + name[i] + ' data base...', flush=True)
 		imgL = cv.imread(os.path.join(data[i], images[0]), cv.IMREAD_GRAYSCALE)
 		imgR = cv.imread(os.path.join(data[i], images[1]), cv.IMREAD_GRAYSCALE)
@@ -33,11 +33,17 @@ def first_requirement():
 		min_disp = int(calib_data[24])
 		max_disp = int(calib_data[25])
 
+		imgL = cv.copyMakeBorder(imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
+		imgR = cv.copyMakeBorder(imgR, None, None, max_disp, None, cv.BORDER_CONSTANT)
+
 		print('Calculating disparity map...', flush=True)
 		window_size = 3
 		block = 3
 		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp, window_size, block)
-		
+
+		h, w = filteredImg.shape
+		filteredImg = filteredImg[0:h, max_disp:w]
+
 		# Redimensiona a imagem para uma melhor visualização
 		cv.namedWindow('filtered', cv.WINDOW_NORMAL)
 		cv.resizeWindow('filtered', (439, 331))
