@@ -80,7 +80,8 @@ def second_requirement():
 	req = 2		
 	#imgL = f.resize_image(imgL, imgR)
 	#new_imgL, new_imgR = f.image_rectify(imgL, imgR)
-	imgR = f.resize_image(imgR, imgL)
+	imgL = imgL[0:1200, 0:1200]
+	print(imgL.shape)
 
 	new_imgL, new_imgR, base_line = f.rectify_images(imgL, imgR, calib_dataL, calib_dataR, req)
 

@@ -364,7 +364,7 @@ def rectify_images(imgL, imgR, calibL, calibR, req):
 	h, w, _ = imgL.shape
 	# Calculate new parameters of rotation and projection
 	# https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga617b1685d4059c6040827800e72ad2b6
-	R1, R2, P1, P2, Q, Roi1, Roi2 = cv.stereoRectify(matrixK_L, None, matrixK_R, None, (h, w), R, T)
+	R1, R2, P1, P2, Q, Roi1, Roi2 = cv.stereoRectify(matrixK_L, distL, matrixK_R, distR, (h, w), R, T)
 	
 	diagonal = int(np.sqrt(imgL.shape[1]**2 + imgL.shape[0]**2))
 	black_img = np.uint8(np.full((diagonal, diagonal, 3), 0))
@@ -391,8 +391,8 @@ def rectify_images(imgL, imgR, calibL, calibR, req):
 
 	# Computes the undistortion and rectification transformation map
 	# https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a
-	mapL = cv.initUndistortRectifyMap(matrixK_L, None, R1, P1, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
-	mapR = cv.initUndistortRectifyMap(matrixK_R, None, R2, P2, (imgR.shape[1], imgR.shape[0]), cv.CV_16SC2)
+	mapL = cv.initUndistortRectifyMap(matrixK_L, distL, R1, P1, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
+	mapR = cv.initUndistortRectifyMap(matrixK_R, distR, R2, P2, (imgR.shape[1], imgR.shape[0]), cv.CV_16SC2)
 
 	# Remap the images
 	new_imgL = cv.remap(imgL, mapL[0], mapL[1], cv.INTER_LANCZOS4)
