@@ -150,13 +150,12 @@ def resize_image(imgL, imgR):
 
 def intrinsic_matrix(calib):
     K = np.zeros((3,3))
-    K[0,0] = calib[0]
-    K[0,1] = calib[4]
-    K[0,2] = calib[2]
-    K[1,1] = calib[1]
-    K[1,2] = calib[3]
-    K[2,2] = 1
-    return K
+    dist = np.zeros((1,5))
+    K = np.array([[calib[0], calib[4], calib[2]],
+    			 [0., calib[1], calib[3]],
+				 [0., 0., 1]])
+    dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
+    return K, dist
 
 def extrinsic_parameters(calib):
     r_vec = np.zeros((3,3))
@@ -347,8 +346,8 @@ def rectify_images(imgL, imgR, calibL, calibR, req):
 # Function to rectify the images
 
 	# Calculate the instrinsic matrix
-	matrixK_L = intrinsic_matrix(calibL)
-	matrixK_R = intrinsic_matrix(calibR)
+	matrixK_L, distL = intrinsic_matrix(calibL)
+	matrixK_R, distR = intrinsic_matrix(calibR)
 
 	# Calculate the rotation and translation vector relative
 	r_vecL, t_vecL = extrinsic_parameters(calibL)
