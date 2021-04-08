@@ -4,6 +4,7 @@
 
 import cv2 as cv
 import numpy as np
+import matplotlib.pyplot as plt
 
 # Define a classe para a captura dos cliques
 class Capture_Click:
@@ -89,6 +90,8 @@ def image_depth (img, focal, base_line, save_dir, center_l, center_r, req):
 	doff = abs(center_l - center_r)
 	
 	Z = bline * f / (new_diff + doff)
+	plt.imshow(Z)
+	plt.show()
 	filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX)
 	filtered_depth_image = np.uint8(filtered_depth_image)
 	filtered_depth_image[filtered_depth_image == 0] = 255
@@ -212,7 +215,7 @@ def image_rectify(imgL, imgR):
 	# Based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
 	FLANN_INDEX_KDTREE = 1
 	index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-	search_params = dict(checks=80)   # or pass empty dictionary
+	search_params = dict(checks=70)   # or pass empty dictionary
 	flann = cv.FlannBasedMatcher(index_params, search_params)
 	matches = flann.knnMatch(des1, des2, k=2)
 
@@ -225,7 +228,7 @@ def image_rectify(imgL, imgR):
 	pts2 = []
 
 	for i, (m, n) in enumerate(matches):
-		if m.distance < 0.5*n.distance:
+		if m.distance < 0.8*n.distance:
 			# Keep this keypoint pair
 			matchesMask[i] = [1, 0]
 			good.append(m)
@@ -236,11 +239,11 @@ def image_rectify(imgL, imgR):
 	# Still based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
 	draw_params = dict(matchColor=(0, 255, 0),
 					singlePointColor=(255, 0, 0),
-					matchesMask=matchesMask[300:500],
+					matchesMask=matchesMask,
 					flags=cv.DrawMatchesFlags_DEFAULT)
 
 	keypoint_matches = cv.drawMatchesKnn(
-		imgL, kp1, imgR, kp2, matches[300:500], None, **draw_params)
+		imgL, kp1, imgR, kp2, matches, None, **draw_params)
 	cv.namedWindow('Keypoint matches', cv.WINDOW_NORMAL)
 	cv.resizeWindow('Keypoint matches', (500,600))
 	cv.imshow("Keypoint matches", keypoint_matches)
@@ -315,8 +318,8 @@ def image_rectify(imgL, imgR):
 	# cv.imwrite("cropped_imgL.jpg", crop_imgL)
 	# cv.imwrite("cropped_imgR.jpg", crop_imgR)
 
-	crop_imgR = cv.cvtColor(crop_imgR, cv.COLOR_BGR2GRAY)
-	crop_imgL = cv.cvtColor(crop_imgL, cv.COLOR_BGR2GRAY)
+	imgR_rectified = cv.cvtColor(imgR_rectified, cv.COLOR_BGR2GRAY)
+	imgL_rectified = cv.cvtColor(imgL_rectified, cv.COLOR_BGR2GRAY)
 
 	return imgL_rectified, imgR_rectified
 
@@ -365,20 +368,6 @@ def rectify_images(imgL, imgR, calibL, calibR, req):
 	# Calculate new parameters of rotation and projection
 	# https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga617b1685d4059c6040827800e72ad2b6
 	R1, R2, P1, P2, Q, Roi1, Roi2 = cv.stereoRectify(matrixK_L, distL, matrixK_R, distR, (h, w), R, T)
-	
-	diagonal = int(np.sqrt(imgL.shape[1]**2 + imgL.shape[0]**2))
-	black_img = np.uint8(np.full((diagonal, diagonal, 3), 0))
-
-	yoff = round((diagonal-imgL.shape[0])/2)
-	xoff = round((diagonal-imgL.shape[1])/2)
-
-	# Attempt to rotate without cropping
-	# Based on: https://stackoverflow.com/questions/30719870/rotate-image-without-cropping-opencv/30723799
-	# use numpy indexing to place the resized image in the center of black image
-	# result = black_img.copy()
-	# result2 = black_img.copy()
-	# result[yoff:yoff+imgL.shape[0], xoff:xoff+imgL.shape[1]] = imgL
-	# result2[yoff:yoff+imgL.shape[0], xoff:xoff+imgL.shape[1]] = imgR
 
 	# Manipulate the cx and cy parameters to control image crop
 	# Based on: https://stackoverflow.com/questions/53701924/how-can-you-rectify-cropped-stereo-images-in-opencv	
@@ -399,13 +388,11 @@ def rectify_images(imgL, imgR, calibL, calibR, req):
 	new_imgR = cv.remap(imgR, mapR[0], mapR[1], cv.INTER_LANCZOS4)
 
 	if req != 3:
-		cv.namedWindow('rectified imgL', cv.WINDOW_NORMAL)
-		cv.resizeWindow('rectified imgL', (439, 331))
-		cv.namedWindow('rectified imgR', cv.WINDOW_NORMAL)
-		cv.resizeWindow('rectified imgR', (439, 331))
+		cv.namedWindow('rectified 1', cv.WINDOW_NORMAL)
+		cv.resizeWindow('rectified 1', (600, 331))
 
-		cv.imshow('rectified imgL', new_imgL)
-		cv.imshow('rectified imgR', new_imgR)
+		concat = cv.hconcat([new_imgL, new_imgR])
+		cv.imshow('rectified 1', concat)
 		cv.waitKey(0)
 		cv.destroyAllWindows()
 
@@ -416,3 +403,92 @@ def rectify_images(imgL, imgR, calibL, calibR, req):
 	new_imgR = cv.cvtColor(new_imgR, cv.COLOR_BGR2GRAY)
 
 	return new_imgL, new_imgR, np.linalg.norm(T)
+
+def ultimate_rectify(calibL, calibR, d1, d2):
+
+	# Calculate the instrinsic matrix
+	matrixK_L, distL = intrinsic_matrix(calibL)
+	matrixK_R, distR = intrinsic_matrix(calibR)
+
+	# Calculate the rotation and translation vector relative
+	r_vecL, t_vecL = extrinsic_parameters(calibL)
+	r_vecR, t_vecR = extrinsic_parameters(calibR)
+	
+	extrinsic_L = np.column_stack((r_vecL, t_vecL))
+	extrinsic_R = np.column_stack((r_vecR, t_vecR))
+
+	matrixP_L = np.matmul(matrixK_L, extrinsic_L)
+	matrixP_R = np.matmul(matrixK_R, extrinsic_R)
+
+	c1 = np.dot(np.linalg.inv(matrixP_L[:, 0:3]),matrixP_L[:,3])
+	c2 = np.dot(np.linalg.inv(matrixP_R[:, 0:3]),matrixP_R[:,3])
+
+	#c1 = np.dot(-np.transpose(r_vecL), np.dot(np.linalg.inv(matrixK_L),matrixP_L[:,3]))
+	#c2 = np.dot(-np.transpose(r_vecR), np.dot(np.linalg.inv(matrixK_R),matrixP_R[:,3]))
+
+	v1 = (c1-c2)
+	v2 = np.cross(np.transpose(r_vecL[2]),v1)
+	# v2 = np.cross(r_vecL[2],v1)
+	v3 = np.cross(v1,v2)
+
+	R = np.array([np.transpose(v1)/np.linalg.norm(v1), np.transpose(v2)/np.linalg.norm(v2), 
+					np.transpose(v3)/np.linalg.norm(v3)])
+
+	A_1 = matrixK_R
+	A_1[0][1] = 0
+	A_2 = matrixK_R
+	A_2[0][1] = 0 
+
+	A_1 = (matrixK_R + matrixK_L)/2
+	A_1[0][1] = 0
+	A_2 = A_1
+	A_2[0][1] = 0   
+
+	A_1[0][2]=A_1[0][2]+d1[0]
+	A_1[1][2]=A_1[1][2]+d1[1]
+	A_2[0][2]=A_2[0][2]+d2[0]
+	A_2[1][2]=A_2[1][2]+d2[1]
+
+
+	aux1 = np.hstack((R, (np.dot(-R, c1)).reshape(3,1)))
+	aux2 = np.hstack((R, (np.dot(-R, c1)).reshape(3,1)))
+	Pn1 = np.dot(A_1, aux1)
+	Pn2 = np.dot(A_2, aux2)
+	H1 = np.dot(Pn1[:,0:3], np.linalg.inv(matrixP_L[:, 0:3]))
+	H2 = np.dot(Pn2[:,0:3], np.linalg.inv(matrixP_R[:, 0:3]))
+
+	return H1, H2, matrixP_L, matrixP_R, np.linalg.norm(v1)
+
+def ultimate_warp_images(imgL, imgR, calibL, calibR):
+	d1 = [0, 0]
+	d2 = [0, 0]
+
+	H1, H2, matrixP_L, matrixP_R, base = ultimate_rectify(calibL, calibR, d1, d2)
+
+	aux1 = [imgL.shape[0], imgL.shape[1], 1]
+	aux2 = [imgR.shape[0], imgR.shape[1], 1]
+	p_aux1 = np.matmul(H1, aux1)
+	p_aux2 = np.matmul(H2, aux2)
+	d1 = [aux1[0] - p_aux1[0]//aux1[2], aux1[1] - p_aux1[1]//aux1[2]]
+	d2 = [aux2[0] - p_aux2[0]//aux2[2], aux2[1] - p_aux2[1]//aux2[2]]
+	d1[1] = d2[1]
+
+	H1, H2, matrixP_L, matrixP_R, base = ultimate_rectify(calibL, calibR, d1, d2)
+
+	ret1 = cv.warpPerspective(imgL, H1, (3000, 3000))
+	ret2 = cv.warpPerspective(imgR, H2, (3000, 3000))
+
+	ret1 = ret1[140:1340, 1800:3000]
+	ret2 = ret2[134:1334, 0:1200]
+
+	cv.namedWindow('retified', cv.WINDOW_NORMAL)
+	cv.resizeWindow('retified', (600, 331))
+
+	concat = cv.hconcat([ret1, ret2])
+	cv.imshow('retified', concat)
+	cv.waitKey(0)
+
+	ret1 = cv.cvtColor(ret1, cv.COLOR_BGR2GRAY)
+	ret2 = cv.cvtColor(ret2, cv.COLOR_BGR2GRAY)
+
+	return ret1, ret2, base
