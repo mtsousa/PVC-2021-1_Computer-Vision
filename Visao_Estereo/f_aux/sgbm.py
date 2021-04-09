@@ -9,21 +9,25 @@ else:
     base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
-images = ['im0.png', 'im1.png', 'rectifiedL.jpg', 'rectifiedR.jpg']
-# images = ['im0.png', 'im1.png', 'rectifiedR.jpg', 'rectifiedL.jpg']
+images = ['im0.png', 'im1.png', 'imgL_rectified.jpg', 'imgR_rectified.jpg']
+# images = ['im0.png', 'im1.png', 'imgR_rectified.jpg', 'imgL_rectified.jpg']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
         os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect'),
         os.path.join(base_new, 'data', 'FurukawaPonce')]
 
-imgL = cv.imread(os.path.join(data[2], images[2]), cv.IMREAD_GRAYSCALE)
-imgR = cv.imread(os.path.join(data[2], images[3]), cv.IMREAD_GRAYSCALE)
+imgL_org = cv.imread(os.path.join(data[2], images[2]), cv.IMREAD_GRAYSCALE)
+imgR_org = cv.imread(os.path.join(data[2], images[3]), cv.IMREAD_GRAYSCALE)
 #stereo = cv.StereoBM_create(numDisparities=16*29, blockSize=15)
 
-win_size = 15**2
-block = 5
-min_disp = -8
-max_disp = 16*4
+win_size = 3**2
+block = 3
+min_disp = 0
+max_disp = 16*14
 num_disp = max_disp - min_disp  # Needs to be divisible by 16
+
+imgL = cv.copyMakeBorder(imgL_org, None, None, max_disp, None, cv.BORDER_CONSTANT)
+imgR = cv.copyMakeBorder(imgR_org, None, None, max_disp, None, cv.BORDER_CONSTANT)
+
 left_matcher = cv.StereoSGBM_create(
     minDisparity=min_disp,
     numDisparities=max_disp,
@@ -38,7 +42,7 @@ left_matcher = cv.StereoSGBM_create(
     mode=cv.STEREO_SGBM_MODE_SGBM_3WAY
 )
 
-stereo = left_matcher
+# stereo = left_matcher
 right_matcher = cv.ximgproc.createRightMatcher(left_matcher)
 
 # FILTER Parameters
@@ -49,26 +53,22 @@ wls_filter = cv.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
 wls_filter.setLambda(lmbda)
 
 wls_filter.setSigmaColor(sigma)
-displ = left_matcher.compute(imgL, imgR) #.astype(np.float32)/16
-dispr = right_matcher.compute(imgR, imgL) #.astype(np.float32)/16
+displ = left_matcher.compute(imgL, imgR).astype(np.float32)/16
+dispr = right_matcher.compute(imgR, imgL).astype(np.float32)/16
 displ = np.int16(displ)
 dispr = np.int16(dispr)
-filteredImg = wls_filter.filter(displ, imgL, None, dispr)  # important to put "imgL" here!!!
+filteredImg = wls_filter.filter(displ, imgL, None, dispr)/16.0  # important to put "imgL" here!!!
 
-filteredImg = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX)
-filteredImg = np.uint8(filteredImg)
+filteredImg = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
 
+# disparity = stereo.compute(imgL,imgR)
+# norm_image = cv.normalize(disparity, None, 0, 255, cv.NORM_MINMAX).astype(np.uint8)
 
-disparity = stereo.compute(imgL,imgR)
-norm_image = cv.normalize(disparity, None, 0, 255, cv.NORM_MINMAX).astype(np.uint8)
+h, w = filteredImg.shape
+filteredImg = filteredImg[0:h, max_disp:w]
 
-cv.namedWindow('image1', cv.WINDOW_NORMAL)
-cv.resizeWindow('image1', (439, 331))
-cv.imshow('image1', norm_image)
-
-# filteredImg = cv.GaussianBlur(filteredImg, (5,5), 5, None, 5)
-
-cv.namedWindow('image2', cv.WINDOW_NORMAL)
-cv.resizeWindow('image2', (439, 331))
-cv.imshow('image2', filteredImg)
+concatenado = cv.hconcat([imgL_org, filteredImg])
+cv.namedWindow('image', cv.WINDOW_NORMAL)
+cv.resizeWindow('image', (1000, 400))
+cv.imshow('image', concatenado)
 cv.waitKey(0)
