@@ -4,32 +4,37 @@
 
 import cv2 as cv
 import numpy as np
+import os.path
 
-# Define a classe para a captura dos cliques
+# Class to contain information about user mouse clicks
 class Capture_Click:
-    initial = ['', '']
-    final = ['', '']
-    clicks_number = int
+	clicks_number = int
 
-    def __init__(self, name):
-        cv.namedWindow(name, cv.WINDOW_GUI_NORMAL)
-        cv.setMouseCallback(name, self.click)
-        self.clicks_number = 0
+	def __init__(self):
+		self.initial = []
+		self.final = []
+		self.clicks_number = 0
 
-    def click(self, event, x, y, flags, param):
-		# Captura os cliques do lado esquerdo do mouse
-        if event == cv.EVENT_LBUTTONDOWN:
-            if self.clicks_number == 0:
-                self.initial[0] = x
-                self.initial[1] = y
-                self.clicks_number += 1
-                # Desenha o ponto capturado na imagem ou o escreve no terminal
+	def click(self,event,x,y,flags,param):
+		
+		if event == cv.EVENT_LBUTTONDOWN:
+			self.initial.clear()
+			self.initial.append((x,y))
+			self.clicks_number += 1
 
-            elif self.clicks_number == 1:
-                self.final[0] = x
-                self.final[1] = y
-                self.clicks_number += 1
-                # Desenha o ponto capturado na imagem ou o escreve no terminal
+			print('x,y for starting coordinates = ', self.initial)
+
+		if event == cv.EVENT_RBUTTONDOWN:
+			self.final.clear()
+			self.final.append((x,y))
+			self.clicks_number += 1
+
+			print('x,y for ending coordinates = ', self.final)
+
+		if self.clicks_number == 2:
+			print('\nYou have collected your coordinates!')
+			print('Press ESC to finish, or keep clicking if you want to change them!\n')
+			self.clicks_number = 0
 
 def show_image(img, w, h, win_name):
 	cv.namedWindow(win_name, cv.WINDOW_NORMAL)
@@ -38,23 +43,97 @@ def show_image(img, w, h, win_name):
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
+def depth_by_clicks(image):
+	# Shows the user a rectified view of toy Morpheus sitting in a chair
+	# looking all gloomy and conspiratory, and asks for two clicks to measure
+	# the object's height.
+
+	coordinates = []
+	depth_measurement = Capture_Click()
+	cv.namedWindow('Morpheus (right view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (right view)', (539, 431))
+
+	cv.imshow('Morpheus (right view)', image)
+	print('\n\n\t\tMeasuring your image\'s depth!')
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!')
+	cv.setMouseCallback('Morpheus (right view)', depth_measurement.click)
+
+	while(1):
+	    cv.imshow('Morpheus (right view)', image)
+	    k = cv.waitKey(20) & 0xFF
+	    if k == 27:
+	        break
+	cv.destroyAllWindows()
+
+	coordinates.append(depth_measurement.initial)
+	coordinates.append(depth_measurement.final)
+
+	return coordinates
+
+def cross_section(image):
+	# Shows the user a (different) rectified view of toy Morpheus sitting in a chair,
+	# still looking scary and misterious, and asks for two pairs of clicks to measure
+	# the objects height and width.
+
+	cross_section = []
+
+	height_measurement = Capture_Click()
+	cv.namedWindow('Morpheus (left view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (left view)', (539, 431))
+	cv.imshow('Morpheus (left view)', image)
+
+	print('\n\n\t\tMeasuring your image\'s height!')
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!')
+	cv.setMouseCallback('Morpheus (left view)', height_measurement.click)
+
+	while(1):
+	    cv.imshow('Morpheus (left view)', image)
+	    k = cv.waitKey(20) & 0xFF
+	    if k == 27:
+	        break
+	cv.destroyAllWindows()
+
+	cross_section.append(height_measurement.initial)
+	cross_section.append(height_measurement.final)
+
+	width_measurement = Capture_Click()
+	cv.namedWindow('Morpheus (left view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (left view)', (539, 431))
+
+	cv.imshow('Morpheus (left view)', image)
+	print('\n\n\t\tMeasuring your image\'s width!')
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!')
+	cv.setMouseCallback('Morpheus (left view)', width_measurement.click)
+
+	while(1):
+	    cv.imshow('Morpheus (left view)', image)
+	    k = cv.waitKey(20) & 0xFF
+	    if k == 27:
+	        break
+	cv.destroyAllWindows()
+
+	cross_section.append(width_measurement.initial)
+	cross_section.append(width_measurement.final)
+
+	return cross_section
+
 def data_reader(file_name):
-# Função para leitura de dados de calibração em arquivo .txt
+# Function to acquire information from .txt files about calibrated cameras
 
 	lines = []
 	data = []
 
 	with open(file_name) as f:
-		lines = f.readlines()  # Armazenar linhas do arquivo em lista
+		lines = f.readlines()  # Store all lines in a list
 
-	# Percorrer linhas separando termos relevantes para inserir na lista
+	# Search list line by line, separating relevant data from irrelevant characters
 	for i in range(len(lines)):
 
 		clean_line = lines[i].replace('=', ' ').replace('[', '').replace(';', '').replace(']', '').replace(',', '')
 		str_results = clean_line.split()
 
 		for j in range(len(str_results)):
-
+			
 			try : 
 				float(str_results[j])
 				data.append(float(str_results[j]))
@@ -64,28 +143,39 @@ def data_reader(file_name):
 	
 	return data
 
-def world_coordinates (img, calib_data):
-# Função que utiliza dados de calibração das câmeras utilizadas para obter coordenadas 
-# 3D dos pontos no espaço
+def world_coordinates (dir_path, max_disp):
+# Function that applies calibration data to rectified images alongside 
+# openCV's reprojectImageTo3D to find [x, y, z] world coordinates
 
-	f = calib_data[0]
-	cx = calib_data[2]
-	cy = calib_data[5]
-	bline =calib_data[19]
-	doff = calib_data[18]
+	imgL = cv.imread(os.path.join(dir_path, 'MorpheusL.jpg'))
+	imgL = imgL[0:1200, 0:1200]
+	imgR = cv.imread(os.path.join(dir_path, 'MorpheusR.jpg'))
 
-	Q = np.float32([[1, 0, 0, -cx],
-                    [0, 1, 0, -cy],
-                    [0, 0, 0, f], 
-                    [0, 0, -1/bline, doff/bline]])
+	calib_dataL = data_reader(os.path.join(dir_path, 'MorpheusL.txt'))
+	calib_dataR = data_reader(os.path.join(dir_path, 'MorpheusR.txt'))
 
-	# Utilizamos a matriz Q para realizar uma reprojeção, convertendo pixels com
-	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
-	world_coordinates = cv.reprojectImageTo3D(img, Q)
+	new_imgL, new_imgR, base_line = warp_images(imgL, imgR, calib_dataL, calib_dataR, req = 3)
+	new_imgL = cv.copyMakeBorder(new_imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
+
+	f = (calib_dataL[0] + calib_dataL[1])/2
+	cx0 = calib_dataL[2]
+	cy0 = calib_dataL[5]
+	cx1 = calib_dataR[2]
+	doff = abs(cx1 - cx0)
+	bline = float(base_line)
+
+	Q = np.float32([[1, 0, 0, -cx0],
+					[0, 1, 0, -cy0],
+					[0, 0, 0, f], 
+					[0, 0, -1/bline, doff/bline]])
+
+	world_coordinate_map = cv.reprojectImageTo3D(new_imgL, Q)
+
+	return world_coordinate_map
 
 def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
-# Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
-# para os objetos na imagem
+# Function to create a depth map, originally in milimeters but normalized to a
+# 0 - 254 black and white scale
 
 	f = focal
 	bline = base_line
@@ -101,21 +191,22 @@ def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
 		cv.imwrite(save_dir, filtered_depth_image)
 	else:
 		return filtered_depth_image
-	# Podemos mapear os valores da imagem de profundidade de volta para unidades em milímetros
-	# por um simples ajuste de escala:
-	# original = np.array((filtered_depth_image - minimo) / float(maximo))
+
+	# The depth image can be mapped back to its original values in milimeters
+	# through a scale adjustment:
+	# original = np.array((filtered_depth_image - lowest_value) / float(highest_value))
 	#return filtered_depth_image
 
 def disparity_calculator(left_image, right_image, min_num, max_num, block, req, save_dir):
-# Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
+# Function that takes a set of two stereo-rectified images to create a disparity map
 
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
-	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
+	    numDisparities = 16*(max_num//16), # Maximum number of disparities 
 	    blockSize = block,
 	    P1 = 8*3*block,
 	    P2 = 32*3*block,
-	    disp12MaxDiff = -1, # Desabilitado 
+	    disp12MaxDiff = -1, # Deactivated
 	    uniquenessRatio = 10,
 	    speckleWindowSize = 50,
 	    speckleRange = 32,
@@ -124,7 +215,7 @@ def disparity_calculator(left_image, right_image, min_num, max_num, block, req, 
 	)
 	right_matcher = cv.ximgproc.createRightMatcher(left_matcher)
 
-	# parâmetros do filtro
+	# filter parameters
 	lmbda = 80000
 	sigma = 1.3
 	wls_filter = cv.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
@@ -154,25 +245,25 @@ def disparity_calculator(left_image, right_image, min_num, max_num, block, req, 
 	return filteredImg
 
 def intrinsic_matrix(calib):
-    K = np.zeros((3,3))
-    dist = np.zeros((1,5))
-    K = np.array([[calib[0], calib[4], calib[2]],
-    			 [0., calib[1], calib[3]],
+	K = np.zeros((3,3))
+	dist = np.zeros((1,5))
+	K = np.array([[calib[0], calib[4], calib[2]],
+				 [0., calib[1], calib[3]],
 				 [0., 0., 1]])
-    dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
-    return K, dist
+	dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
+	return K, dist
 
 def extrinsic_parameters(calib):
-    r_vec = np.zeros((3,3))
-    t_vec = np.zeros((3,1))
-    r_vec = np.array([[calib[5], calib[6], calib[7]], 
-				     [calib[8], calib[9], calib[10]],
-		             [calib[11], calib[12], calib[13]]])
-    t_vec = np.array([[calib[14]],
-					 [calib[15]],	
-					 [calib[16]]])
-    
-    return r_vec, t_vec
+	r_vec = np.zeros((3,3))
+	t_vec = np.zeros((3,1))
+	r_vec = np.array([[calib[5], calib[6], calib[7]],
+					[calib[8], calib[9], calib[10]],
+					[calib[11], calib[12], calib[13]]])
+	t_vec = np.array([[calib[14]],
+					[calib[15]],
+					[calib[16]]])
+
+	return r_vec, t_vec
 
 def stereo_rectify(calibL, calibR, d1, d2):
 
@@ -180,7 +271,7 @@ def stereo_rectify(calibL, calibR, d1, d2):
 	matrixK_L, distL = intrinsic_matrix(calibL)
 	matrixK_R, distR = intrinsic_matrix(calibR)
 
-	# Calculate the rotation and translation vector relative
+	# Calculate the rotation and translation vectors
 	r_vecL, t_vecL = extrinsic_parameters(calibL)
 	r_vecR, t_vecR = extrinsic_parameters(calibR)
 	
@@ -222,7 +313,7 @@ def stereo_rectify(calibL, calibR, d1, d2):
 
 	return H1, H2, Pn1, Pn2, np.linalg.norm(v1)
 
-def warp_images(imgL, imgR, calibL, calibR):
+def warp_images(imgL, imgR, calibL, calibR, req):
 	d1 = [0, 0]
 	d2 = [0, 0]
 
@@ -245,7 +336,9 @@ def warp_images(imgL, imgR, calibL, calibR):
 	ret2 = ret2[134:1334, 0:1200]
 
 	concat = cv.hconcat([ret1, ret2])
-	show_image(concat, 1000, 400, 'rectified')
+
+	if req != 3:
+		show_image(concat, 1000, 400, 'rectified')
 
 	ret1 = cv.cvtColor(ret1, cv.COLOR_BGR2GRAY)
 	ret2 = cv.cvtColor(ret2, cv.COLOR_BGR2GRAY)
