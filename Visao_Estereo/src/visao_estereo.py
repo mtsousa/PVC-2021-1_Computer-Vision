@@ -7,16 +7,15 @@ import numpy as np
 import os.path
 import functions as f
 
-
 def first_requirement():
-	# Define o diretório anterior ao diretório do programa
+	# Organize paths to find necessary images and calibration data
 	base = os.path.abspath(os.path.dirname(__file__))
 	if os.name == 'nt':
 		base_new = base.replace('\\src', '')
 	else:
 		base_new = base.replace('/src', '')
 
-	# Define os vetores das imagens e dos caminhos para as imagens
+	# Define vectors for images and their respective paths
 	images = ['im0.png', 'im1.png']
 	data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
 			os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
@@ -45,16 +44,16 @@ def first_requirement():
 		center_l = calib_data[2]
 		center_r = calib_data[2]
 		
-		# Calcula o mapa de profundidade e o salva no diretório especificado
+		# Compute depth map and save it in a specific folder
 		print('Calculating depth map...', flush=True)
 		f.image_depth(filteredImg, focal_length, base_line, center_l, center_r, req, os.path.join(data[i],'profundidade.png'))
 
 def second_requirement():
-	# Define o diretório anterior ao diretório do programa
+	# Organize paths to find necessary images and calibration data
 	base = os.path.abspath(os.path.dirname(__file__))
 	base_new = base.replace('\\src', '')
 
-	# Define os vetores das imagens e dos caminhos para as imagens
+	# Define vectors for images and their respective paths
 	images = ['MorpheusL.jpg', 'MorpheusR.jpg']
 	data = os.path.join(base_new, 'data', 'FurukawaPonce')
 
@@ -70,12 +69,12 @@ def second_requirement():
 	block = 1
 	max_disp = 16*18
 	
-	new_imgL, new_imgR, base_line = f.warp_images(imgL, imgR, calib_dataL, calib_dataR)
+	new_imgL, new_imgR, base_line = f.warp_images(imgL, imgR, calib_dataL, calib_dataR, req)
 
 	new_imgL = cv.copyMakeBorder(new_imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
 	new_imgR = cv.copyMakeBorder(new_imgR, None, None, max_disp, None, cv.BORDER_CONSTANT)
 
-	# Calcula o mapa de disparidade e de profundidade
+	# Compute disparity map
 	print('Calculating disparity map...', flush=True)
 	filteredImg = f.disparity_calculator(new_imgL, new_imgR, 0, max_disp, block, req, os.path.join(data,'disparidade.pgm'))
 
@@ -83,42 +82,36 @@ def second_requirement():
 	center_l = calib_dataL[2]
 	center_r = calib_dataR[2]
 
-	# Calcula o mapa de profundidade e o salva no diretório especificado
+	# Compute depth map and save it in a specific folder
 	print('Calculating depth map...', flush=True)
 	f.image_depth(filteredImg, focal_length, base_line, center_l, center_r, req, os.path.join(data,'profundidade.png'))
 
 def third_requirement():
-	# Define o diretório anterior ao diretório do programa
+	# Organize paths to find necessary images and calibration data
 	base = os.path.abspath(os.path.dirname(__file__))
 	base_new = base.replace('\\src', '')
-
-	# Define os vetores da imagem e do caminho para a imagem
-	image = 'MorpheusR.jpg'
 	data = os.path.join(base_new, 'data', 'FurukawaPonce')
+	images = ['rectifiedL.jpg', 'rectifiedR.jpg']
 
-	img = cv.imread(os.path.join(data, image))
-	req = 3
+	# Verify if the disparity map and accompanying rectified images exist;
+	# if not, go back to requirement 2 and create them before continuing
+	if os.path.isfile(os.path.join(data,'disparidade.pgm')) == False:
+		print('Disparity map not found!')
+		second_requirement()
 
-	dimensions = 3 # Trocar o valor da variável para 0 após implementar o calculo dos pontos
-	points = np.zeros((3,2))
-	click = f.Capture_Click('image')
-	result = []
+	# Show user images to collect depth, width and height measurements
+	left_img = cv.imread(os.path.join(data, images[0]))
+	right_img = cv.imread(os.path.join(data, images[1]))
 
-	cv.imshow('image', img)
-	while(dimensions < 3):
-		if click.clicks_number > 0 :
-			if click.clicks_number == 2:
-				# Calcula a distância entre os dois pontos capturados
-				# result = Recebe o valor calculado em mm
-				# points[dimensions] = pontos ajustados da caixa
-				click.clicks_number = 0
-				dimensions += 1
-				if dimensions == 3:
-					print("Box size result in mm: ", result, flush=True)
-					# Desenha a caixa na image do Morpheus	
-					# Verifica se quer desenha nova caixa
-					# Se sim, então dimensions = 0 e points.clear()
-	cv.waitKey(0)
+	depth_measurement = f.depth_by_clicks(right_img)
+	height_and_width = f.cross_section(left_img)
+	
+	# Create matrix with 3D world coordinates to measure IRL distances
+	real_world_coordinates = 0.0239 * (f.world_coordinates(data, max_disp = 288))
+
+	# Each element in the world coordinates matrix has values x, y and z.
+	print('World coordinates received have elements such as:\n')
+	print('real_world_coordinates[0][0] = ', real_world_coordinates[0][0])
 
 if __name__ == "__main__":
 	# Apenas uma ideia de interação com o usuário para definição do dado do projeto
