@@ -32,35 +32,22 @@ def first_requirement():
 
 		min_disp = int(calib_data[24])
 		max_disp = int(calib_data[25])
+		block = 3
 
 		imgL = cv.copyMakeBorder(imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
 		imgR = cv.copyMakeBorder(imgR, None, None, max_disp, None, cv.BORDER_CONSTANT)
 
 		print('Calculating disparity map...', flush=True)
-		window_size = 3
-		block = 3
-		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp, window_size, block)
-
-		h, w = filteredImg.shape
-		filteredImg = filteredImg[0:h, max_disp:w]
-
-		# Redimensiona a imagem para uma melhor visualização
-		cv.namedWindow('filtered', cv.WINDOW_NORMAL)
-		cv.resizeWindow('filtered', (439, 331))
-
-		# Mostra o resultado do mapa de disparidade e o salva no diretório especificado
-		cv.imshow('filtered', filteredImg)
-		cv.waitKey(0)
-		cv.destroyAllWindows()
-		cv.imwrite(os.path.join(data[i],'disparidade.pgm'), filteredImg)
+		filteredImg = f.disparity_calculator(imgL, imgR, min_disp, max_disp, block, req, os.path.join(data[i],'disparidade.pgm'))
 
 		focal_length = calib_data[0]
 		base_line = calib_data[19]
 		center_l = calib_data[2]
 		center_r = calib_data[2]
+		
 		# Calcula o mapa de profundidade e o salva no diretório especificado
 		print('Calculating depth map...', flush=True)
-		f.image_depth(filteredImg, focal_length, base_line, os.path.join(data[i],'profundidade.png'), center_l, center_r, req)
+		f.image_depth(filteredImg, focal_length, base_line, center_l, center_r, req, os.path.join(data[i],'profundidade.png'))
 
 def second_requirement():
 	# Define o diretório anterior ao diretório do programa
@@ -77,44 +64,28 @@ def second_requirement():
 
 	calib_dataL = f.data_reader(os.path.join(data, 'MorpheusL.txt'))
 	calib_dataR = f.data_reader(os.path.join(data, 'MorpheusR.txt'))
-	req = 2		
+	
+	req = 2
 	imgL = imgL[0:1200, 0:1200]
-	#new_imgL, new_imgR = f.image_rectify(imgL, imgR)
-	new_imgL, new_imgR, base_line = f.ultimate_warp_images(imgL, imgR, calib_dataL, calib_dataR)
+	block = 1
+	max_disp = 16*18
+	
+	new_imgL, new_imgR, base_line = f.warp_images(imgL, imgR, calib_dataL, calib_dataR)
 
-	# new_imgL, new_imgR, base_line = f.rectify_images(imgL, imgR, calib_dataL, calib_dataR, req)
+	new_imgL = cv.copyMakeBorder(new_imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
+	new_imgR = cv.copyMakeBorder(new_imgR, None, None, max_disp, None, cv.BORDER_CONSTANT)
 
 	# Calcula o mapa de disparidade e de profundidade
 	print('Calculating disparity map...', flush=True)
-	window_size = 5**2
-	block = 3
-	filteredImg = f.disparity_calculator(new_imgL, new_imgR, 8, 16*4, window_size, block)
+	filteredImg = f.disparity_calculator(new_imgL, new_imgR, 0, max_disp, block, req, os.path.join(data,'disparidade.pgm'))
 
-	# Redimensiona a imagem para uma melhor visualização
-	cv.namedWindow('filtered', cv.WINDOW_NORMAL)
-	cv.resizeWindow('filtered', (439, 331))
-
-	# Mostra o resultado do mapa de disparidade e o salva no diretório especificado
-	cv.imshow('filtered', filteredImg)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
-	#cv.imwrite(os.path.join(data,'disparidade.pgm'), filteredImg)
-
-	cam_translationL = [calib_dataL[14], calib_dataL[15], calib_dataL[16]]
-	cam_translationR = [calib_dataR[14], calib_dataR[15], calib_dataR[16]]
-
-	# diff_vec = np.array(cam_translationL) - np.array(cam_translationR)
-	# baseline = np.linalg.norm(np.array(diff_vec))
 	focal_length = (calib_dataL[0] + calib_dataL[1])/2
 	center_l = calib_dataL[2]
 	center_r = calib_dataR[2]
 
-	# print('Baseline for MorpheusL image can be estimated as: ', baseline, flush=True)
 	# Calcula o mapa de profundidade e o salva no diretório especificado
 	print('Calculating depth map...', flush=True)
-	f.image_depth(filteredImg, focal_length, base_line, os.path.join(data,'profundidade.png'), center_l, center_r, req)
-
-	#f.world_coordinates(filteredImg, calib_data)
+	f.image_depth(filteredImg, focal_length, base_line, center_l, center_r, req, os.path.join(data,'profundidade.png'))
 
 def third_requirement():
 	# Define o diretório anterior ao diretório do programa

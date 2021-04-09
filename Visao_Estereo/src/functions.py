@@ -4,7 +4,6 @@
 
 import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
 
 # Define a classe para a captura dos cliques
 class Capture_Click:
@@ -31,6 +30,13 @@ class Capture_Click:
                 self.final[1] = y
                 self.clicks_number += 1
                 # Desenha o ponto capturado na imagem ou o escreve no terminal
+
+def show_image(img, w, h, win_name):
+	cv.namedWindow(win_name, cv.WINDOW_NORMAL)
+	cv.resizeWindow(win_name, (w, h))
+	cv.imshow(win_name, img)
+	cv.waitKey(0)
+	cv.destroyAllWindows()
 
 def data_reader(file_name):
 # Função para leitura de dados de calibração em arquivo .txt
@@ -77,47 +83,38 @@ def world_coordinates (img, calib_data):
 	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
 	world_coordinates = cv.reprojectImageTo3D(img, Q)
 
-def image_depth (img, focal, base_line, save_dir, center_l, center_r, req):
+def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
 # Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
 # para os objetos na imagem
 
 	f = focal
 	bline = base_line
-	aux = np.zeros(img.shape)
-	img_float = aux + img
-	new_diff = img_float - aux
-	new_diff[new_diff == 0.0] = np.inf
+	img[img == 0.0] = np.inf
 	doff = abs(center_l - center_r)
-	
-	Z = bline * f / (new_diff + doff)
-	plt.imshow(Z)
-	plt.show()
-	filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX)
-	filtered_depth_image = np.uint8(filtered_depth_image)
-	filtered_depth_image[filtered_depth_image == 0] = 255
+
+	Z = bline * f / (img + doff)
 
 	if req != 3:
-	# Redimensiona a imagem para uma melhor visualização
-		cv.namedWindow('DepthMap', cv.WINDOW_NORMAL)
-		cv.resizeWindow('DepthMap', (439, 331))
-
-		cv.imshow('DepthMap', filtered_depth_image)
+		filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+		filtered_depth_image[filtered_depth_image == 0] = 255
+		show_image(filtered_depth_image, 439, 331, 'depth_map')
 		cv.imwrite(save_dir, filtered_depth_image)
-		cv.waitKey(0)
-		cv.destroyAllWindows()
+	else:
+		return filtered_depth_image
 	# Podemos mapear os valores da imagem de profundidade de volta para unidades em milímetros
 	# por um simples ajuste de escala:
 	# original = np.array((filtered_depth_image - minimo) / float(maximo))
+	#return filtered_depth_image
 
-def disparity_calculator(left_image, right_image, min_num, max_num, window_size, block):
+def disparity_calculator(left_image, right_image, min_num, max_num, block, req, save_dir):
 # Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
 
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
 	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
 	    blockSize = block,
-	    P1 = 8*3*window_size,
-	    P2 = 32*3*window_size,
+	    P1 = 8*3*block,
+	    P2 = 32*3*block,
 	    disp12MaxDiff = -1, # Desabilitado 
 	    uniquenessRatio = 10,
 	    speckleWindowSize = 50,
@@ -138,18 +135,23 @@ def disparity_calculator(left_image, right_image, min_num, max_num, window_size,
 	displ = np.int16(displ)
 	dispr = np.int16(dispr)
 	filteredImg = (wls_filter.filter(displ, left_image, None, dispr) / 16.0)
+	filteredImg[filteredImg == -1] = 0
 
-	filteredImg = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX)
-	filteredImg = np.uint8(filteredImg)
+	if req != 3:
+		h, w = filteredImg.shape
+		filteredImg = filteredImg[0:h, max_num:w]
+
+		aux = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=255, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
+		show_image(aux, 439, 331, 'filtered')
+		cv.imwrite(save_dir, aux)
+
+		if req == 1:
+			aux2 = cv.normalize(src=filteredImg, dst=filteredImg, beta=0, alpha=1, norm_type=cv.NORM_MINMAX, dtype=cv.CV_32F)
+			new_dir = save_dir.replace('disparidade.pgm', '')
+			new_dir = new_dir + 'disparidade.npy'
+			np.save(new_dir, aux2)
 	
 	return filteredImg
-
-def resize_image(imgL, imgR):
-# Function to resize the images
-
-    height, width, _ = imgR.shape
-    imgL = cv.resize(imgL, (width, height), interpolation = cv.INTER_LINEAR)
-    return imgL
 
 def intrinsic_matrix(calib):
     K = np.zeros((3,3))
@@ -172,239 +174,7 @@ def extrinsic_parameters(calib):
     
     return r_vec, t_vec
 
-# Visualize epilines
-# Adapted from: https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
-def drawlines(img1src, lines, pts1src):
-
-	r, c, _ = img1src.shape
-	img1color = img1src.copy()
-	# Edit: use the same random seed so that two images are comparable!
-	np.random.seed(0)
-	i = 0
-	for r, pt1 in zip(lines, pts1src):
-		color = tuple(np.random.randint(0, 255, 3).tolist())
-		x0, y0 = map(int, [0, -r[2]/r[1]])
-		x1, y1 = map(int, [c, -(r[2]+r[0]*c)/r[1]])
-		if i%6 == 0:
-			img1color = cv.line(img1color, (x0, y0), (x1, y1), color, 3)
-		img1color = cv.circle(img1color, tuple(pt1), 5, color, 5)
-		i += 1
-	return img1color
-
-def image_rectify(imgL, imgR):
-# Função que encontra os pontos de match e retifica as imagens
-
-	imgL_name = 'imgL'
-	imgR_name = 'imgR'
-
-	# find the keypoints and descriptors with SIFT
-	sift = cv.SIFT_create()
-	kp1, des1 = sift.detectAndCompute(imgL, None)
-	kp2, des2 = sift.detectAndCompute(imgR, None)
-
-	# Visualize keypoints
-	imgSift = cv.drawKeypoints(
-		imgL, kp1, None, flags=cv.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-	cv.namedWindow('SIFT Keypoints', cv.WINDOW_NORMAL)
-	cv.resizeWindow('SIFT Keypoints', (700, 650))
-	cv.imshow("SIFT Keypoints", imgSift)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
-
-	# Match keypoints in both images
-	# Based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
-	FLANN_INDEX_KDTREE = 1
-	index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-	search_params = dict(checks=70)   # or pass empty dictionary
-	flann = cv.FlannBasedMatcher(index_params, search_params)
-	matches = flann.knnMatch(des1, des2, k=2)
-
-	# Keep good matches: calculate distinctive image features
-	# Lowe, D.G. Distinctive Image Features from Scale-Invariant Keypoints. International Journal of Computer Vision 60, 91–110 (2004). https://doi.org/10.1023/B:VISI.0000029664.99615.94
-	# https://www.cs.ubc.ca/~lowe/papers/ijcv04.pdf
-	matchesMask = [[0, 0] for i in range(len(matches))]
-	good = []
-	pts1 = []
-	pts2 = []
-
-	for i, (m, n) in enumerate(matches):
-		if m.distance < 0.8*n.distance:
-			# Keep this keypoint pair
-			matchesMask[i] = [1, 0]
-			good.append(m)
-			pts2.append(kp2[m.trainIdx].pt)
-			pts1.append(kp1[m.queryIdx].pt)
-
-	# Draw the keypoint matches between both pictures
-	# Still based on: https://docs.opencv.org/master/dc/dc3/tutorial_py_matcher.html
-	draw_params = dict(matchColor=(0, 255, 0),
-					singlePointColor=(255, 0, 0),
-					matchesMask=matchesMask,
-					flags=cv.DrawMatchesFlags_DEFAULT)
-
-	keypoint_matches = cv.drawMatchesKnn(
-		imgL, kp1, imgR, kp2, matches, None, **draw_params)
-	cv.namedWindow('Keypoint matches', cv.WINDOW_NORMAL)
-	cv.resizeWindow('Keypoint matches', (500,600))
-	cv.imshow("Keypoint matches", keypoint_matches)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
-
-	# Calculate the fundamental matrix for the cameras
-	# https://docs.opencv.org/master/da/de9/tutorial_py_epipolar_geometry.html
-	pts1 = np.int32(pts1)
-	pts2 = np.int32(pts2)
-	fundamental_matrix, inliers = cv.findFundamentalMat(pts1, pts2, cv.FM_RANSAC)
-
-	# We select only inlier points
-	pts1 = pts1[inliers.ravel() == 1]
-	pts2 = pts2[inliers.ravel() == 1]
-
-	# Find epilines corresponding to points in right image (second image) and
-	# drawing its lines on left image
-	lines1 = cv.computeCorrespondEpilines(
-		pts2.reshape(-1, 1, 2), 2, fundamental_matrix)
-	lines1 = lines1.reshape(-1, 3)
-	line_imgL = drawlines(imgL, lines1, pts1)
-
-	# Find epilines corresponding to points in left image (first image) and
-	# drawing its lines on right image
-	lines2 = cv.computeCorrespondEpilines(
-		pts1.reshape(-1, 1, 2), 1, fundamental_matrix)
-	lines2 = lines2.reshape(-1, 3)
-	line_imgR = drawlines(imgR, lines2, pts2)
-
-	cv.namedWindow('left epipolar lines', cv.WINDOW_NORMAL)
-	cv.resizeWindow('left epipolar lines', (439, 331))
-	cv.namedWindow('right epipolar lines', cv.WINDOW_NORMAL)
-	cv.resizeWindow('right epipolar lines', (439, 331))
-
-	cv.imshow('left epipolar lines', line_imgL)
-	cv.imshow('right epipolar lines', line_imgR)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
-
-	# Stereo rectification (uncalibrated variant)
-	# Adapted from: https://stackoverflow.com/a/62607343
-	h1, w1, _ = imgL.shape
-	h2, w2, _ = imgR.shape
-	_, H1, H2 = cv.stereoRectifyUncalibrated(
-		np.float32(pts1), np.float32(pts2), fundamental_matrix, imgSize=(w1, h1)
-	)
-
-	# Undistort (rectify) the images and save them
-	# Adapted from: https://stackoverflow.com/a/62607343
-	imgL_rectified = cv.warpPerspective(imgL, H1, (w1, h1), cv.BORDER_ISOLATED)
-	imgR_rectified = cv.warpPerspective(imgR, H2, (w2, h2), cv.BORDER_ISOLATED)
-
-	y = 58
-	x = 58
-	h, w, _ = imgR_rectified.shape
-	crop_imgR = imgR_rectified[y:h-y, x:w-x]
-	crop_imgL = imgL_rectified[y:h-y, x:w-x]
-
-	cv.namedWindow(imgL_name, cv.WINDOW_NORMAL)
-	cv.resizeWindow(imgL_name, (439, 331))
-	cv.namedWindow(imgR_name, cv.WINDOW_NORMAL)
-	cv.resizeWindow(imgR_name, (439, 331))
-
-	cv.imshow(imgL_name, imgL_rectified)
-	cv.imshow(imgR_name, imgR_rectified)
-	cv.waitKey(0)
-	cv.destroyAllWindows()
-
-	# cv.imwrite("rectified_1.jpg", imgL_rectified)
-	# cv.imwrite("rectified_2.jpg", imgR_rectified)
-	# cv.imwrite("cropped_imgL.jpg", crop_imgL)
-	# cv.imwrite("cropped_imgR.jpg", crop_imgR)
-
-	imgR_rectified = cv.cvtColor(imgR_rectified, cv.COLOR_BGR2GRAY)
-	imgL_rectified = cv.cvtColor(imgL_rectified, cv.COLOR_BGR2GRAY)
-
-	return imgL_rectified, imgR_rectified
-
-def calculate_relative(calibL, calibR):
-# Compute the relative rotation and translation between the cameras
-# Based on opencv tutorial: https://docs.opencv.org/master/d9/dab/tutorial_homography.html
-
-	r_vecL, t_vecL = extrinsic_parameters(calibL)
-	r_vecR, t_vecR = extrinsic_parameters(calibR)
-	
-	r_vecL_transp = np.transpose(r_vecL)
-	r_diff = np.matmul(r_vecR, r_vecL_transp)
-	t_diff = np.matmul(r_vecR, np.matmul(-r_vecL_transp, t_vecL)) + t_vecR
-
-	# Based on stack overflow question: https://stackoverflow.com/questions/38737960/finding-relative-rotation-between-two-cameras
-	# r_vecL_inv = np.linalg.inv(r_vecL)
-	# r_diff = np.matmul(r_vecL_inv, r_vecR)
-	# t_diff = np.matmul(r_vecL, (t_vecR - t_vecL))
-
-	# Show the baseline between the the cameras
-	baseline = np.linalg.norm(t_diff)
-	print('Baseline: ', baseline, flush=True)
-
-	return r_diff, t_diff
-
-def rectify_images(imgL, imgR, calibL, calibR, req):
-# Function to rectify the images
-
-	# Calculate the instrinsic matrix
-	matrixK_L, distL = intrinsic_matrix(calibL)
-	matrixK_R, distR = intrinsic_matrix(calibR)
-
-	# Calculate the rotation and translation vector relative
-	r_vecL, t_vecL = extrinsic_parameters(calibL)
-	r_vecR, t_vecR = extrinsic_parameters(calibR)
-	
-	extrinsic_L = np.column_stack((r_vecL, t_vecL))
-	extrinsic_R = np.column_stack((r_vecR, t_vecR))
-
-	# matrixP_L = np.matmul(matrixK_L, extrinsic_L)
-	# matrixP_R = np.matmul(matrixK_R, extrinsic_R)
-
-	R, T = calculate_relative(calibL, calibR)
-
-	h, w, _ = imgL.shape
-	# Calculate new parameters of rotation and projection
-	# https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga617b1685d4059c6040827800e72ad2b6
-	R1, R2, P1, P2, Q, Roi1, Roi2 = cv.stereoRectify(matrixK_L, distL, matrixK_R, distR, (h, w), R, T)
-
-	# Manipulate the cx and cy parameters to control image crop
-	# Based on: https://stackoverflow.com/questions/53701924/how-can-you-rectify-cropped-stereo-images-in-opencv	
-	matrixK_R[0][2] = matrixK_R[0][2]/10000
-	matrixK_L[0][2] = 2.25*matrixK_L[0][2]
-	matrixK_L[1][2] = 1.1*matrixK_R[1][2]
-	matrixK_R[1][2] = 0.765*matrixK_R[1][2]
-
-	#print(abs(matrixK_L[0][2]-matrixK_R[0][2]))
-
-	# Computes the undistortion and rectification transformation map
-	# https://docs.opencv.org/3.4/da/d54/group__imgproc__transform.html#ga7dfb72c9cf9780a347fbe3d1c47e5d5a
-	mapL = cv.initUndistortRectifyMap(matrixK_L, distL, R1, P1, (imgL.shape[1], imgL.shape[0]), cv.CV_16SC2)
-	mapR = cv.initUndistortRectifyMap(matrixK_R, distR, R2, P2, (imgR.shape[1], imgR.shape[0]), cv.CV_16SC2)
-
-	# Remap the images
-	new_imgL = cv.remap(imgL, mapL[0], mapL[1], cv.INTER_LANCZOS4)
-	new_imgR = cv.remap(imgR, mapR[0], mapR[1], cv.INTER_LANCZOS4)
-
-	if req != 3:
-		cv.namedWindow('rectified 1', cv.WINDOW_NORMAL)
-		cv.resizeWindow('rectified 1', (600, 331))
-
-		concat = cv.hconcat([new_imgL, new_imgR])
-		cv.imshow('rectified 1', concat)
-		cv.waitKey(0)
-		cv.destroyAllWindows()
-
-	# cv.imwrite('rectifiedL.jpg', new_imgL)
-	# cv.imwrite('rectifiedR.jpg', new_imgR)
-
-	new_imgL = cv.cvtColor(new_imgL, cv.COLOR_BGR2GRAY)
-	new_imgR = cv.cvtColor(new_imgR, cv.COLOR_BGR2GRAY)
-
-	return new_imgL, new_imgR, np.linalg.norm(T)
-
-def ultimate_rectify(calibL, calibR, d1, d2):
+def stereo_rectify(calibL, calibR, d1, d2):
 
 	# Calculate the instrinsic matrix
 	matrixK_L, distL = intrinsic_matrix(calibL)
@@ -420,50 +190,43 @@ def ultimate_rectify(calibL, calibR, d1, d2):
 	matrixP_L = np.matmul(matrixK_L, extrinsic_L)
 	matrixP_R = np.matmul(matrixK_R, extrinsic_R)
 
-	c1 = np.dot(np.linalg.inv(matrixP_L[:, 0:3]),matrixP_L[:,3])
-	c2 = np.dot(np.linalg.inv(matrixP_R[:, 0:3]),matrixP_R[:,3])
-
-	#c1 = np.dot(-np.transpose(r_vecL), np.dot(np.linalg.inv(matrixK_L),matrixP_L[:,3]))
-	#c2 = np.dot(-np.transpose(r_vecR), np.dot(np.linalg.inv(matrixK_R),matrixP_R[:,3]))
+	c1 = np.matmul(np.transpose(r_vecL), np.matmul(np.linalg.inv(matrixK_L), matrixP_L[:,3]))
+	c2 = np.matmul(np.transpose(r_vecR), np.matmul(np.linalg.inv(matrixK_R), matrixP_R[:,3]))
 
 	v1 = (c1-c2)
 	v2 = np.cross(np.transpose(r_vecL[2]),v1)
-	# v2 = np.cross(r_vecL[2],v1)
 	v3 = np.cross(v1,v2)
 
-	R = np.array([np.transpose(v1)/np.linalg.norm(v1), np.transpose(v2)/np.linalg.norm(v2), 
-					np.transpose(v3)/np.linalg.norm(v3)])
-
-	A_1 = matrixK_R
-	A_1[0][1] = 0
-	A_2 = matrixK_R
-	A_2[0][1] = 0 
+	R = np.array([np.transpose(v1)/np.linalg.norm(v1), 
+				  np.transpose(v2)/np.linalg.norm(v2), 
+				  np.transpose(v3)/np.linalg.norm(v3)])
 
 	A_1 = (matrixK_R + matrixK_L)/2
 	A_1[0][1] = 0
 	A_2 = A_1
 	A_2[0][1] = 0   
 
-	A_1[0][2]=A_1[0][2]+d1[0]
-	A_1[1][2]=A_1[1][2]+d1[1]
-	A_2[0][2]=A_2[0][2]+d2[0]
-	A_2[1][2]=A_2[1][2]+d2[1]
+	A_1[0][2] = A_1[0][2] + d1[0]
+	A_1[1][2] = A_1[1][2] + d1[1]
+	A_2[0][2] = A_2[0][2] + d2[0]
+	A_2[1][2] = A_2[1][2] + d2[1]
 
+	aux = np.matmul(-R, c1).reshape(3,1)
+	new_extL = np.hstack((R, aux))
+	new_extR = new_extL
+	Pn1 = np.matmul(A_1, new_extL)
+	Pn2 = np.matmul(A_2, new_extR)
 
-	aux1 = np.hstack((R, (np.dot(-R, c1)).reshape(3,1)))
-	aux2 = np.hstack((R, (np.dot(-R, c1)).reshape(3,1)))
-	Pn1 = np.dot(A_1, aux1)
-	Pn2 = np.dot(A_2, aux2)
-	H1 = np.dot(Pn1[:,0:3], np.linalg.inv(matrixP_L[:, 0:3]))
-	H2 = np.dot(Pn2[:,0:3], np.linalg.inv(matrixP_R[:, 0:3]))
+	H1 = np.matmul(Pn1[:,0:3], np.linalg.inv(matrixP_L[:, 0:3]))
+	H2 = np.matmul(Pn2[:,0:3], np.linalg.inv(matrixP_R[:, 0:3]))
 
-	return H1, H2, matrixP_L, matrixP_R, np.linalg.norm(v1)
+	return H1, H2, Pn1, Pn2, np.linalg.norm(v1)
 
-def ultimate_warp_images(imgL, imgR, calibL, calibR):
+def warp_images(imgL, imgR, calibL, calibR):
 	d1 = [0, 0]
 	d2 = [0, 0]
 
-	H1, H2, matrixP_L, matrixP_R, base = ultimate_rectify(calibL, calibR, d1, d2)
+	H1, H2, matrixP_L, matrixP_R, baseline = stereo_rectify(calibL, calibR, d1, d2)
 
 	aux1 = [imgL.shape[0], imgL.shape[1], 1]
 	aux2 = [imgR.shape[0], imgR.shape[1], 1]
@@ -473,7 +236,7 @@ def ultimate_warp_images(imgL, imgR, calibL, calibR):
 	d2 = [aux2[0] - p_aux2[0]//aux2[2], aux2[1] - p_aux2[1]//aux2[2]]
 	d1[1] = d2[1]
 
-	H1, H2, matrixP_L, matrixP_R, base = ultimate_rectify(calibL, calibR, d1, d2)
+	H1, H2, matrixP_L, matrixP_R, baseline = stereo_rectify(calibL, calibR, d1, d2)
 
 	ret1 = cv.warpPerspective(imgL, H1, (3000, 3000))
 	ret2 = cv.warpPerspective(imgR, H2, (3000, 3000))
@@ -481,14 +244,10 @@ def ultimate_warp_images(imgL, imgR, calibL, calibR):
 	ret1 = ret1[140:1340, 1800:3000]
 	ret2 = ret2[134:1334, 0:1200]
 
-	cv.namedWindow('retified', cv.WINDOW_NORMAL)
-	cv.resizeWindow('retified', (600, 331))
-
 	concat = cv.hconcat([ret1, ret2])
-	cv.imshow('retified', concat)
-	cv.waitKey(0)
+	show_image(concat, 1000, 400, 'rectified')
 
 	ret1 = cv.cvtColor(ret1, cv.COLOR_BGR2GRAY)
 	ret2 = cv.cvtColor(ret2, cv.COLOR_BGR2GRAY)
 
-	return ret1, ret2, base
+	return ret1, ret2, baseline

@@ -9,8 +9,8 @@ else:
     base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
-images = ['im0.png', 'im1.png', 'imgL_rectified.jpg', 'imgR_rectified.jpg']
-# images = ['im0.png', 'im1.png', 'imgR_rectified.jpg', 'imgL_rectified.jpg']
+#images = ['im0.png', 'im1.png', 'imgL_rectified.jpg', 'imgR_rectified.jpg']
+images = ['im0.png', 'im1.png', 'imgR_rectified.jpg', 'imgL_rectified.jpg']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
         os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect'),
         os.path.join(base_new, 'data', 'FurukawaPonce')]
