@@ -110,14 +110,21 @@ def third_requirement():
 						[height_and_width[0][0], height_and_width[0][1], height_and_width[1][0], height_and_width[1][1]],
 						[height_and_width[2][0], height_and_width[2][1], height_and_width[3][0], height_and_width[3][1]]])
 
-	print('\npoints =\n', P)
+	f.show_clicks(left_img, right_img, P)
 	
 	# Create matrix with 3D world coordinates to measure IRL distances
 	real_world_coordinates = 0.0239 * (f.world_coordinates(data, max_disp = 288))
 
 	# Each element in the world coordinates matrix has values x, y and z.
-
-	print('\n\nreal_world_coordinates at that spot =\n')
+	print('\nThe real_world_coordinates corresponding to points clicked by the user are:\n')
+	
+	print('Object height:\n')
+	print(real_world_coordinates[height_and_width[0][0]][height_and_width[0][1]], 'to', real_world_coordinates[height_and_width[1][0]][height_and_width[1][1]])
+	
+	print('\nObject width:\n')
+	print(real_world_coordinates[height_and_width[2][0]][height_and_width[2][1]], 'to', real_world_coordinates[height_and_width[3][0]][height_and_width[3][1]])
+	
+	print('\nObject depth:\n')
 	print(real_world_coordinates[depth_measurement[0][0]][depth_measurement[0][1]], 'to', real_world_coordinates[depth_measurement[1][0]][depth_measurement[1][1]])
 
 if __name__ == "__main__":
