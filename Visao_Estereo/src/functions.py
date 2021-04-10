@@ -23,7 +23,7 @@ class Capture_Click:
 			self.initial.append(y)
 			self.clicks_number = 1
 
-			print('x,y for starting coordinates = ', self.initial)
+			print('x,y for starting coordinates = ', self.initial, flush=True)
 
 		if event == cv.EVENT_RBUTTONDOWN:
 			self.final.clear()
@@ -34,7 +34,7 @@ class Capture_Click:
 			else:
 				self.clicks_number = 1
 
-			print('x,y for ending coordinates = ', self.final)
+			print('x,y for ending coordinates = ', self.final, flush=True)
 
 		if self.clicks_number == 2:
 			print('\nYou have collected your coordinates!')
@@ -59,8 +59,8 @@ def depth_by_clicks(image):
 	cv.resizeWindow('Morpheus (right view)', (539, 431))
 
 	cv.imshow('Morpheus (right view)', image)
-	print('\n\n\t\tMeasuring your image\'s depth!')
-	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!')
+	print('\n\n\t\tMeasuring your image\'s depth!', flush=True)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
 	cv.setMouseCallback('Morpheus (right view)', depth_measurement.click)
 
 	while(1):
@@ -87,8 +87,8 @@ def cross_section(image):
 	cv.resizeWindow('Morpheus (left view)', (539, 431))
 	cv.imshow('Morpheus (left view)', image)
 
-	print('\n\n\t\tMeasuring your image\'s height!')
-	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!')
+	print('\n\n\t\tMeasuring your image\'s height!', flush=True)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
 	cv.setMouseCallback('Morpheus (left view)', height_measurement.click)
 
 	while(1):
@@ -106,8 +106,8 @@ def cross_section(image):
 	cv.resizeWindow('Morpheus (left view)', (539, 431))
 
 	cv.imshow('Morpheus (left view)', image)
-	print('\n\n\t\tMeasuring your image\'s width!')
-	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!')
+	print('\n\n\t\tMeasuring your image\'s width!', flush=True)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
 	cv.setMouseCallback('Morpheus (left view)', width_measurement.click)
 
 	while(1):
@@ -216,6 +216,25 @@ def data_reader(file_name):
 	
 	return data
 
+def factorize_projection(matrixP_L, matrixP_R):
+# Function that factorize a projective matrix as P = K[R|t]
+	Q_L = np.linalg.inv(matrixP_L[0:3, 0:3])
+	Q_R = np.linalg.inv(matrixP_R[0:3, 0:3])
+
+	U_L, B_L = np.linalg.qr(Q_L)
+	U_R, B_R = np.linalg.qr(Q_R)
+
+	matR_L = np.linalg.inv(U_L)
+	vect_L = np.matmul(B_L, matrixP_L[0:3, 3])
+	matK_L = np.linalg.inv(B_L)
+	matK_L = matK_L/matK_L[2, 2]
+
+	matR_R = np.linalg.inv(U_R)
+	vect_R = np.matmul(B_R, matrixP_R[0:3, 3])
+	matK_R = np.linalg.inv(B_R)
+	matK_R = matK_R/matK_R[2, 2]
+
+
 def world_coordinates (dir_path, max_disp):
 # Function that applies calibration data to rectified images alongside 
 # openCV's reprojectImageTo3D to find [x, y, z] world coordinates
@@ -227,9 +246,11 @@ def world_coordinates (dir_path, max_disp):
 	calib_dataL = data_reader(os.path.join(dir_path, 'MorpheusL.txt'))
 	calib_dataR = data_reader(os.path.join(dir_path, 'MorpheusR.txt'))
 
-	new_imgL, new_imgR, base_line = warp_images(imgL, imgR, calib_dataL, calib_dataR, req = 3)
+	new_imgL, new_imgR, base_line, matrixP_L, matrixP_R = warp_images(imgL, imgR, calib_dataL, calib_dataR, 3)
 	new_imgL = cv.copyMakeBorder(new_imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
 
+	factorize_projection(matrixP_L, matrixP_R)
+	
 	f = (calib_dataL[0] + calib_dataL[1])/2
 	cx0 = calib_dataL[2]
 	cy0 = calib_dataL[5]
@@ -416,4 +437,7 @@ def warp_images(imgL, imgR, calibL, calibR, req):
 	ret1 = cv.cvtColor(ret1, cv.COLOR_BGR2GRAY)
 	ret2 = cv.cvtColor(ret2, cv.COLOR_BGR2GRAY)
 
-	return ret1, ret2, baseline
+	if req == 3:
+		return ret1, ret2, baseline, matrixP_L, matrixP_R
+	else:
+		return ret1, ret2, baseline

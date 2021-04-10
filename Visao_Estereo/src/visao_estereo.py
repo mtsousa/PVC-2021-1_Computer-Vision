@@ -96,7 +96,7 @@ def third_requirement():
 	# Verify if the disparity map and accompanying rectified images exist;
 	# if not, go back to requirement 2 and create them before continuing
 	if os.path.isfile(os.path.join(data,'disparidade.pgm')) == False:
-		print('Disparity map not found!')
+		print('Disparity map not found!', flush=True)
 		second_requirement()
 
 	# Show user images to collect depth, width and height measurements
