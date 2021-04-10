@@ -48,12 +48,13 @@ def show_image(img, w, h, win_name):
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
-def depth_by_clicks(image):
+def lateral_measurements(image):
 	# Shows the user a rectified view of toy Morpheus sitting in a chair
-	# looking all gloomy and conspiratory, and asks for two clicks to measure
-	# the object's height.
+	# looking all gloomy and conspiratory, and asks for two pairs of clicks to measure
+	# the object's depth and height.
 
 	coordinates = []
+
 	depth_measurement = Capture_Click()
 	cv.namedWindow('Morpheus (right view)', cv.WINDOW_NORMAL)
 	cv.resizeWindow('Morpheus (right view)', (539, 431))
@@ -73,39 +74,39 @@ def depth_by_clicks(image):
 	coordinates.append(depth_measurement.initial)
 	coordinates.append(depth_measurement.final)
 
-	return coordinates
-
-def cross_section(image):
-	# Shows the user a (different) rectified view of toy Morpheus sitting in a chair,
-	# still looking scary and misterious, and asks for two pairs of clicks to measure
-	# the objects height and width.
-
-	cross_section = []
-
 	height_measurement = Capture_Click()
-	cv.namedWindow('Morpheus (left view)', cv.WINDOW_NORMAL)
-	cv.resizeWindow('Morpheus (left view)', (539, 431))
-	cv.imshow('Morpheus (left view)', image)
+	cv.namedWindow('Morpheus (right view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (right view)', (539, 431))
 
+	cv.imshow('Morpheus (right view)', image)
 	print('\n\n\t\tMeasuring your image\'s height!', flush=True)
-	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
-	cv.setMouseCallback('Morpheus (left view)', height_measurement.click)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image height!', flush=True)
+	cv.setMouseCallback('Morpheus (right view)', height_measurement.click)
 
 	while(1):
-	    cv.imshow('Morpheus (left view)', image)
+	    cv.imshow('Morpheus (right view)', image)
 	    k = cv.waitKey(20) & 0xFF
 	    if k == 27:
 	        break
 	cv.destroyAllWindows()
 
-	cross_section.append(height_measurement.initial)
-	cross_section.append(height_measurement.final)
+	coordinates.append(height_measurement.initial)
+	coordinates.append(height_measurement.final)
+
+	return coordinates
+
+def frontal_measurement(image):
+	# Shows the user a (different) rectified view of toy Morpheus sitting in a chair,
+	# still looking scary and misterious, and asks for two clicks to measure
+	# the object's width.
+
+	coordinates = []
 
 	width_measurement = Capture_Click()
 	cv.namedWindow('Morpheus (left view)', cv.WINDOW_NORMAL)
 	cv.resizeWindow('Morpheus (left view)', (539, 431))
-
 	cv.imshow('Morpheus (left view)', image)
+
 	print('\n\n\t\tMeasuring your image\'s width!', flush=True)
 	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
 	cv.setMouseCallback('Morpheus (left view)', width_measurement.click)
@@ -117,16 +118,16 @@ def cross_section(image):
 	        break
 	cv.destroyAllWindows()
 
-	cross_section.append(width_measurement.initial)
-	cross_section.append(width_measurement.final)
+	coordinates.append(width_measurement.initial)
+	coordinates.append(width_measurement.final)
 
-	return cross_section
+	return coordinates
 
 def common_origin(points):
 # Function to re-organize object measurements so all three lines
 # come from a single origin
 
-	origin = (1180, 800)
+	origin = (880, 800)
 	height = abs(points[1][1] - points[1][3])
 	width = abs(points[2][0] - points[2][2])
 
@@ -234,27 +235,21 @@ def factorize_projection(matrixP_L, matrixP_R):
 	matK_R = np.linalg.inv(B_R)
 	matK_R = matK_R/matK_R[2, 2]
 
+	return matK_L, matK_R
 
-def world_coordinates (dir_path, max_disp):
+def world_coordinates (left_img, base_line, matrixP_L, matrixP_R):
 # Function that applies calibration data to rectified images alongside 
 # openCV's reprojectImageTo3D to find [x, y, z] world coordinates
 
-	imgL = cv.imread(os.path.join(dir_path, 'MorpheusL.jpg'))
-	imgL = imgL[0:1200, 0:1200] # Linha problematica ! Esta limitando o tamanho de saida na matriz Q, o que quebra a compatibilidade com as imagens
-	imgR = cv.imread(os.path.join(dir_path, 'MorpheusR.jpg'))
+	calib_dataL, calib_dataR = factorize_projection(matrixP_L, matrixP_R)
 
-	calib_dataL = data_reader(os.path.join(dir_path, 'MorpheusL.txt'))
-	calib_dataR = data_reader(os.path.join(dir_path, 'MorpheusR.txt'))
-
-	new_imgL, new_imgR, base_line, matrixP_L, matrixP_R = warp_images(imgL, imgR, calib_dataL, calib_dataR, 3)
-	new_imgL = cv.copyMakeBorder(new_imgL, None, None, max_disp, None, cv.BORDER_CONSTANT)
-
-	factorize_projection(matrixP_L, matrixP_R)
+	print('\ncalib_dataL = ', calib_dataL)
+	print('\ncalib_dataR = ', calib_dataR)
 	
-	f = (calib_dataL[0] + calib_dataL[1])/2
-	cx0 = calib_dataL[2]
-	cy0 = calib_dataL[5]
-	cx1 = calib_dataR[2]
+	f = (calib_dataL[0][0] + calib_dataL[1][1])/2
+	cx0 = calib_dataL[0][2]
+	cy0 = calib_dataL[1][2]
+	cx1 = calib_dataR[0][2]
 	doff = abs(cx1 - cx0)
 	bline = float(base_line)
 
@@ -263,7 +258,9 @@ def world_coordinates (dir_path, max_disp):
 					[0, 0, 0, f], 
 					[0, 0, -1/bline, doff/bline]])
 
-	world_coordinate_map = cv.reprojectImageTo3D(new_imgL, Q)
+	world_coordinate_map = cv.reprojectImageTo3D(left_img, Q)
+
+	print ('world_coordinate_map has size', world_coordinate_map.size)
 
 	return world_coordinate_map
 
