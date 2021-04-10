@@ -37,8 +37,8 @@ class Capture_Click:
 			print('x,y for ending coordinates = ', self.final, flush=True)
 
 		if self.clicks_number == 2:
-			print('\nYou have collected your coordinates!')
-			print('Press ESC to finish, or keep clicking if you want to change them!\n')
+			print('\nYou have collected your coordinates!', flush=True)
+			print('Press ESC to finish, or keep clicking if you want to change them!\n', flush=True)
 			self.clicks_number = 0
 
 def show_image(img, w, h, win_name):
