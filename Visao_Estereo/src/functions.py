@@ -19,15 +19,20 @@ class Capture_Click:
 		
 		if event == cv.EVENT_LBUTTONDOWN:
 			self.initial.clear()
-			self.initial.append((x,y))
-			self.clicks_number += 1
+			self.initial.append(x)
+			self.initial.append(y)
+			self.clicks_number = 1
 
 			print('x,y for starting coordinates = ', self.initial)
 
 		if event == cv.EVENT_RBUTTONDOWN:
 			self.final.clear()
-			self.final.append((x,y))
-			self.clicks_number += 1
+			self.final.append(x)
+			self.final.append(y)
+			if self.clicks_number == 1:
+				self.clicks_number += 1
+			else:
+				self.clicks_number = 1
 
 			print('x,y for ending coordinates = ', self.final)
 
