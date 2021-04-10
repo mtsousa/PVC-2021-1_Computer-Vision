@@ -90,8 +90,10 @@ def third_requirement():
 	# Organize paths to find necessary images and calibration data
 	base = os.path.abspath(os.path.dirname(__file__))
 	base_new = base.replace('\\src', '')
+
+	# Define vectors for images and their respective paths
+	images = ['MorpheusL.jpg', 'MorpheusR.jpg']
 	data = os.path.join(base_new, 'data', 'FurukawaPonce')
-	images = ['rectifiedL.jpg', 'rectifiedR.jpg']
 
 	# Verify if the disparity map and accompanying rectified images exist;
 	# if not, go back to requirement 2 and create them before continuing
@@ -99,34 +101,42 @@ def third_requirement():
 		print('Disparity map not found!', flush=True)
 		second_requirement()
 
+	imgL = cv.imread(os.path.join(data, images[0]))
+	imgR = cv.imread(os.path.join(data, images[1]))
+
+	calib_dataL = f.data_reader(os.path.join(data, 'MorpheusL.txt'))
+	calib_dataR = f.data_reader(os.path.join(data, 'MorpheusR.txt'))
+	
+	req = 3
+	imgL = imgL[0:1200, 0:1200]
+
+	left_img, right_img, base_line, matrixP_L, matrixP_R = f.warp_images(imgL, imgR, calib_dataL, calib_dataR, req)
+
 	# Show user images to collect depth, width and height measurements
-	left_img = cv.imread(os.path.join(data, images[0]))
-	right_img = cv.imread(os.path.join(data, images[1]))
+	depth_and_height = f.lateral_measurements(right_img)
+	width = f.frontal_measurement(left_img)
 
-	depth_measurement = f.depth_by_clicks(right_img)
-	height_and_width = f.cross_section(left_img)
-
-	P = np.array([[depth_measurement[0][0], depth_measurement[0][1], depth_measurement[1][0], depth_measurement[1][1]],
-						[height_and_width[0][0], height_and_width[0][1], height_and_width[1][0], height_and_width[1][1]],
-						[height_and_width[2][0], height_and_width[2][1], height_and_width[3][0], height_and_width[3][1]]])
+	P = np.array([[depth_and_height[0][0], depth_and_height[0][1], depth_and_height[1][0], depth_and_height[1][1]],
+						[depth_and_height[2][0], depth_and_height[2][1], depth_and_height[3][0], depth_and_height[3][1]],
+						[width[0][0], width[0][1], width[1][0], width[1][1]]])
 
 	f.show_clicks(left_img, right_img, P)
 	
 	# Create matrix with 3D world coordinates to measure IRL distances
-	real_world_coordinates = 0.0239 * (f.world_coordinates(data, max_disp = 288))
+	real_world_coordinates = 0.0239 * (f.world_coordinates(left_img, base_line, matrixP_L, matrixP_R))
 
 	# Each element in the world coordinates matrix has values x, y and z.
 	print('\nThe real_world_coordinates corresponding to points clicked by the user are:\n')
 	
+	print('\nObject depth:\n')
+	print(real_world_coordinates[depth_and_height[0][0]][depth_and_height[0][1]], 'to', real_world_coordinates[depth_and_height[1][0]][depth_and_height[1][1]])
+
 	print('Object height:\n')
-	print(real_world_coordinates[height_and_width[0][0]][height_and_width[0][1]], 'to', real_world_coordinates[height_and_width[1][0]][height_and_width[1][1]])
+	print(real_world_coordinates[depth_and_height[2][0]][depth_and_height[2][1]], 'to', real_world_coordinates[depth_and_height[3][0]][depth_and_height[3][1]])
 	
 	print('\nObject width:\n')
-	print(real_world_coordinates[height_and_width[2][0]][height_and_width[2][1]], 'to', real_world_coordinates[height_and_width[3][0]][height_and_width[3][1]])
+	print(real_world_coordinates[width[2][0]][width[2][1]], 'to', real_world_coordinates[width[3][0]][width[3][1]])
 	
-	print('\nObject depth:\n')
-	print(real_world_coordinates[depth_measurement[0][0]][depth_measurement[0][1]], 'to', real_world_coordinates[depth_measurement[1][0]][depth_measurement[1][1]])
-
 if __name__ == "__main__":
 	# Apenas uma ideia de interação com o usuário para definição do dado do projeto
 	data = input('Define the number of requirement (1, 2, 3): ')
