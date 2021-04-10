@@ -105,13 +105,20 @@ def third_requirement():
 
 	depth_measurement = f.depth_by_clicks(right_img)
 	height_and_width = f.cross_section(left_img)
+
+	P = np.array([[depth_measurement[0][0], depth_measurement[0][1], depth_measurement[1][0], depth_measurement[1][1]],
+						[height_and_width[0][0], height_and_width[0][1], height_and_width[1][0], height_and_width[1][1]],
+						[height_and_width[2][0], height_and_width[2][1], height_and_width[3][0], height_and_width[3][1]]])
+
+	print('\npoints =\n', P)
 	
 	# Create matrix with 3D world coordinates to measure IRL distances
 	real_world_coordinates = 0.0239 * (f.world_coordinates(data, max_disp = 288))
 
 	# Each element in the world coordinates matrix has values x, y and z.
-	print('World coordinates received have elements such as:\n')
-	print('real_world_coordinates[0][0] = ', real_world_coordinates[0][0])
+
+	print('\n\nreal_world_coordinates at that spot =\n')
+	print(real_world_coordinates[depth_measurement[0][0]][depth_measurement[0][1]], 'to', real_world_coordinates[depth_measurement[1][0]][depth_measurement[1][1]])
 
 if __name__ == "__main__":
 	# Apenas uma ideia de interação com o usuário para definição do dado do projeto
