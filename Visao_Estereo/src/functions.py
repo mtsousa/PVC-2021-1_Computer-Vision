@@ -211,14 +211,15 @@ def stereo_rectify(calibL, calibR, d1, d2):
 	A_2[0][2] = A_2[0][2] + d2[0]
 	A_2[1][2] = A_2[1][2] + d2[1]
 
-	aux = np.matmul(-R, c1).reshape(3,1)
-	new_extL = np.hstack((R, aux))
-	new_extR = new_extL
+	aux1 = np.matmul(-R, c1).reshape(3,1)
+	aux2 = np.matmul(-R, c2).reshape(3,1)
+	new_extL = np.hstack((R, aux1))
+	new_extR = np.hstack((R, aux2))
 	Pn1 = np.matmul(A_1, new_extL)
 	Pn2 = np.matmul(A_2, new_extR)
 
-	H1 = np.matmul(Pn1[:,0:3], np.linalg.inv(matrixP_L[:, 0:3]))
-	H2 = np.matmul(Pn2[:,0:3], np.linalg.inv(matrixP_R[:, 0:3]))
+	H1 = np.matmul(Pn1[: ,0: 3], np.linalg.inv(matrixP_L[:,0: 3]))
+	H2 = np.matmul(Pn2[: ,0: 3], np.linalg.inv(matrixP_R[:,0: 3]))
 
 	return H1, H2, Pn1, Pn2, np.linalg.norm(v1)
 
