@@ -3,7 +3,7 @@ import numpy as np
 import os.path
 import matplotlib.pyplot as plt
 
-def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp, mask_resize):
+def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp):
 
 	gt_shape = gtdisp.shape
 	disp_shape = disparity.shape
@@ -19,7 +19,7 @@ def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp, mask_resize):
 	or ((scale * height2) != height)):
 		print("	  disp size = ", width2, " x ", height2)
 		print("GT disp size =", width, " x ", height)
-		raise ValueError("GT disp size must be exactly 1, 2, or 4 * disp size");
+		raise ValueError("GT disp size must be exactly 1, 2, or 4 * disp size")
 
 	n = 0
 	bad = 0
@@ -32,7 +32,6 @@ def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp, mask_resize):
 	for y in range(height):
 		for x in range(width):
 			gt = gtdisp[x, y]
-			mask = mask_resize[x, y]
 
 			if (gt == np.inf):
 				print('Eh infinito')
@@ -56,13 +55,11 @@ def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp, mask_resize):
 				d = round(d)
 
 			err = abs(d-gt)
-			# Correção dos pixels de busca (mask == 128) região com sombra
-			if mask in [255, 128]:
-				n += 1
-				if (valid):
-					serr += err
-					if (err > badthresh):
-						bad += 1
+			n += 1
+			if (valid):
+				serr += err
+				if (err > badthresh):
+					bad += 1
 
 	badpercent =  100.0*bad/n
 	invalidpercent =  100.0*invalid/n
@@ -82,23 +79,17 @@ else:
 	base_new = base.replace('/f_aux', '')
 
 # Define os vetores das imagens e dos caminhos para as imagens
-images = ['disparidade.pgm', 'gt_disparity.png', 'mask.png']
+images = ['disparidade.npy', 'gt_disparidade.npy']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
 		os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
 name = ['Jadeplant', 'Playtable']
 
 for i in range(len(name)):
-	disparity = cv.imread(os.path.join(data[i], images[0]), cv.IMREAD_GRAYSCALE)
-	gtdisp = cv.imread(os.path.join(data[i], images[1]), cv.IMREAD_GRAYSCALE)
-	mask = cv.imread(os.path.join(data[i], images[2]), cv.IMREAD_GRAYSCALE)
+	disparity = np.load(os.path.join(data[i], images[0]))*100
+	gtdisp = np.load(os.path.join(data[i], images[1]))*100
 
-	mask_resize = cv.resize(mask, (disparity.shape[1], disparity.shape[0]), interpolation = cv.INTER_LANCZOS4)
+	#mask_resize = cv.resize(mask, (disparity.shape[1], disparity.shape[0]), interpolation = cv.INTER_LANCZOS4)
 
-	#plt.imshow(mask_resize, cmap='gray')
-	#plt.show()
-
-	#print('New mask size: ', mask_resize.shape)
-	#print('gt size: ', gtdisp.shape)
 	cv.namedWindow('Disparidade calculada', cv.WINDOW_NORMAL)
 	cv.resizeWindow('Disparidade calculada', (439, 331))
 	cv.imshow('Disparidade calculada', disparity)
@@ -115,4 +106,4 @@ for i in range(len(name)):
 	rounddisp = 0
 
 	print('Calculating error to ' + name[i] + ' results...\n', flush=True)
-	evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp, mask_resize)
+	evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp)

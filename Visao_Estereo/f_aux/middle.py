@@ -42,17 +42,12 @@ def read_pfm(pfm_file_path, base_new):
     img = np.flipud(img)
     #
 
-    
+    matrix_gt = cv2.normalize(img, None, 0, 1, cv2.NORM_MINMAX, cv2.CV_32F)
+    np.save(os.path.join(base_new, 'gt_disparidade.npy'), matrix_gt)
+
     groundtruth = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     show(groundtruth, "disparity")
     cv2.imwrite(os.path.join(base_new, 'gt_disparity.png'), groundtruth)
-
-    # plt.imshow(groundtruth, cmap='jet')
-    # plt.colorbar()
-    # plt.savefig('color_gt_disparity.png')
-    # plt.show()
-    # Até aqui...
-    # O resto veio daqui: https://blog.csdn.net/weixin_44899143/article/details/89186891
 
     return dispariy, [(height, width, channels), scale]
 
@@ -90,7 +85,7 @@ def main():
     base = os.path.abspath(os.path.dirname(__file__))
     if os.name == 'nt':
 	    base_new = base.replace('\\f_aux', '')
-	else:
+    else:
 	    base_new = base.replace('/f_aux', '')
 
     data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
