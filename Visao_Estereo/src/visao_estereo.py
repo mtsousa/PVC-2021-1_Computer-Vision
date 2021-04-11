@@ -26,34 +26,6 @@ def first_requirement():
 		imgL = cv.imread(os.path.join(data[i], images[0]), cv.IMREAD_GRAYSCALE)
 		imgR = cv.imread(os.path.join(data[i], images[1]), cv.IMREAD_GRAYSCALE)
 
-# Autores: Matheus Teixeira de Sousa (teixeira.sousa@aluno.unb.br)
-#          João Luiz Machado Júnior (180137158@aluno.unb.br)
-# Disciplina: Princípios de Visão Computacional - turma A
-
-import cv2 as cv
-import numpy as np
-import os.path
-import functions as f
-
-def first_requirement():
-	# Organize paths to find necessary images and calibration data
-	base = os.path.abspath(os.path.dirname(__file__))
-	if os.name == 'nt':
-		base_new = base.replace('\\src', '')
-	else:
-		base_new = base.replace('/src', '')
-
-	# Define vectors for images and their respective paths
-	images = ['im0.png', 'im1.png']
-	data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
-			os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
-	name = ['Jadeplant', 'Playtable']
-
-	for i in range (len(name)):
-		print('\nLoading images from ' + name[i] + ' data base...', flush=True)
-		imgL = cv.imread(os.path.join(data[i], images[0]), cv.IMREAD_GRAYSCALE)
-		imgR = cv.imread(os.path.join(data[i], images[1]), cv.IMREAD_GRAYSCALE)
-
 		calib_data = f.data_reader(os.path.join(data[i], 'calib.txt'))
 		req = 1
 
@@ -141,31 +113,20 @@ def third_requirement():
 	left_img, right_img, base_line, matrixP_L, matrixP_R = f.warp_images(imgL, imgR, calib_dataL, calib_dataR, req)
 
 	# Show user images to collect depth, width and height measurements
-	depth_and_height = f.lateral_measurements(right_img)
+	depth_and_height = f.lateral_measurements(right_img, base_line)
 	width = f.frontal_measurement(left_img)
 
 	P = np.array([[depth_and_height[0][0], depth_and_height[0][1], depth_and_height[1][0], depth_and_height[1][1]],
 						[depth_and_height[2][0], depth_and_height[2][1], depth_and_height[3][0], depth_and_height[3][1]],
 						[width[0][0], width[0][1], width[1][0], width[1][1]]])
-
-	f.show_clicks(left_img, right_img, P)
 	
 	# Create matrix with 3D world coordinates to measure IRL distances
-	left_img = cv.cvtColor(left_img, cv.COLOR_BGR2GRAY)
-	real_world_coordinates = 0.0239 * (f.world_coordinates(left_img, base_line, matrixP_L, matrixP_R))
+	gray_left_img = cv.cvtColor(left_img, cv.COLOR_BGR2GRAY)
+	real_world_coordinates = 0.0239 * (f.world_coordinates(gray_left_img, base_line, matrixP_L, matrixP_R))
 
-	# Each element in the world coordinates matrix has values x, y and z.
-	print('\nThe real_world_coordinates corresponding to points clicked by the user are:\n')
-	
-	print('\nObject depth:\n')
-	print(real_world_coordinates[P[0][0]][P[0][1]], 'to', real_world_coordinates[P[0][2]][P[0][3]])
+	f.box_size(P, real_world_coordinates)
+	f.show_clicks(left_img, right_img, P)
 
-	print('Object height:\n')
-	print(real_world_coordinates[P[1][0]][P[1][1]], 'to', real_world_coordinates[P[1][2]][P[1][3]])
-	
-	print('\nObject width:\n')
-	print(real_world_coordinates[P[2][0]][P[2][1]], 'to', real_world_coordinates[P[2][2]][P[2][3]])
-	
 if __name__ == "__main__":
 	# Main menu for 
 	data = input('Define the number of requirement (1, 2, 3): ')
