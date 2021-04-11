@@ -135,17 +135,30 @@ def common_origin(points):
 # come from a single origin, intentionally set right behind Morpheus' chair
 
 	origin = (890, 790)
-	height = abs(points[1][1] - points[1][3])
-	width = abs(points[2][0] - points[2][2])
+	h = abs(points[1][1] - points[1][3])
+	w = abs(points[2][0] - points[2][2])
 
-	x_depth = abs(points[0][0] - points[0][2])
-	y_depth = abs(points[0][1] - points[0][3])
+	x_d = abs(points[0][0] - points[0][2])
+	y_d = abs(points[0][1] - points[0][3])
 
-	reorganized_points = np.array([[origin[0], origin[1], (origin[0] - x_depth), (origin[1] + y_depth)],
-									[origin[0], origin[1], origin[0], (origin[1] - height)],
-									[origin[0], origin[1], (origin[0] - width), origin[1]]])
+	reorganized_points = np.array([[origin[0], origin[1], (origin[0] - x_d), (origin[1] + y_d)],
+									[origin[0], origin[1], origin[0], (origin[1] - h)],
+									[origin[0], origin[1], (origin[0] - w), origin[1]]])
 
-	return reorganized_points
+	complete_box = np.array([[origin[0], origin[1], (origin[0] - w), origin[1]],
+							[origin[0], (origin[1] - h), (origin[0] - w), (origin[1] - h)],
+							[origin[0], origin[1], origin[0], (origin[1] - h)],
+							[(origin[0] - w), origin[1], (origin[0] - w), (origin[1] - h)],
+							[origin[0], origin[1], (origin[0] - x_d), (origin[1] + y_d)],
+							[(origin[0] - w), origin[1], (origin[0] - (x_d + w)), (origin[1] + y_d)],
+							[origin[0], (origin[1] - h), (origin[0] - x_d), ((origin[1] + y_d) - h)],
+							[(origin[0] - w), (origin[1] - h), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
+							[(origin[0] - x_d), (origin[1] + y_d), (origin[0] - x_d), ((origin[1] + y_d) - h)],
+							[(origin[0] - (x_d + w)), (origin[1] + y_d), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
+							[(origin[0] - x_d), ((origin[1] + y_d) - h), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
+							[(origin[0] - x_d), (origin[1] + y_d), (origin[0] - (x_d + w)), (origin[1] + y_d)]])
+
+	return complete_box
 
 def show_clicks(imageL, imageR, points):
 # Function to show in an image the user's clicks and subsequent measurements
