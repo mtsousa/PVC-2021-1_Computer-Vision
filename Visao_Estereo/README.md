@@ -23,3 +23,9 @@
 >python src/visao_stereo.py
 - For Linux users:
 >python3 src/visao_stereo.py
+
+### Sample of image in README
+![alt text](https://www.serpro.gov.br/menu/noticias/noticias-2020/o-que-eh-visao-computacional/imagem1artigo.png/@@images/eeb269b6-1014-4539-a03d-946d931d535f.png)
+
+### Other sample of image
+![alt text](data/FurukawaPonce/profundidade.png)

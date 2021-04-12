@@ -4,32 +4,42 @@
 
 import cv2 as cv
 import numpy as np
+import os.path
 
-# Define a classe para a captura dos cliques
+# Class to contain information about user mouse clicks
 class Capture_Click:
-    initial = ['', '']
-    final = ['', '']
-    clicks_number = int
+	clicks_number = int
 
-    def __init__(self, name):
-        cv.namedWindow(name, cv.WINDOW_GUI_NORMAL)
-        cv.setMouseCallback(name, self.click)
-        self.clicks_number = 0
+	def __init__(self):
+		self.initial = []
+		self.final = []
+		self.clicks_number = 0
 
-    def click(self, event, x, y, flags, param):
-		# Captura os cliques do lado esquerdo do mouse
-        if event == cv.EVENT_LBUTTONDOWN:
-            if self.clicks_number == 0:
-                self.initial[0] = x
-                self.initial[1] = y
-                self.clicks_number += 1
-                # Desenha o ponto capturado na imagem ou o escreve no terminal
+	def click(self,event,x,y,flags,param):
+		
+		if event == cv.EVENT_LBUTTONDOWN:
+			self.initial.clear()
+			self.initial.append(x)
+			self.initial.append(y)
+			self.clicks_number = 1
 
-            elif self.clicks_number == 1:
-                self.final[0] = x
-                self.final[1] = y
-                self.clicks_number += 1
-                # Desenha o ponto capturado na imagem ou o escreve no terminal
+			print('x,y for starting coordinates = ', self.initial, flush=True)
+
+		if event == cv.EVENT_RBUTTONDOWN:
+			self.final.clear()
+			self.final.append(x)
+			self.final.append(y)
+			if self.clicks_number == 1:
+				self.clicks_number += 1
+			else:
+				self.clicks_number = 1
+
+			print('x,y for ending coordinates = ', self.final, flush=True)
+
+		if self.clicks_number == 2:
+			print('\nYou have collected your coordinates!', flush=True)
+			print('Press ESC to finish, or keep clicking if you want to change them!\n', flush=True)
+			self.clicks_number = 0
 
 def show_image(img, w, h, win_name):
 	cv.namedWindow(win_name, cv.WINDOW_NORMAL)
@@ -38,23 +48,157 @@ def show_image(img, w, h, win_name):
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
+def lateral_measurements(image, bline):
+	# Shows the user a rectified view of toy Morpheus sitting in a chair
+	# looking all gloomy and conspiratory, and asks for two pairs of clicks to measure
+	# the object's depth and height.
+
+	coordinates = []
+	bline /= 10
+
+	depth_measurement = Capture_Click()
+	cv.namedWindow('Morpheus (right view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (right view)', (539, 431))
+
+	cv.imshow('Morpheus (right view)', image)
+	print('\n\n\t\tMeasuring your image\'s depth!', flush=True)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
+	cv.setMouseCallback('Morpheus (right view)', depth_measurement.click)
+
+	while(1):
+	    cv.imshow('Morpheus (right view)', image)
+	    k = cv.waitKey(20) & 0xFF
+	    if k == 27:
+	        break
+	cv.destroyAllWindows()
+
+	# Using the provided baseline, we translate the user's click coordinates
+	# to analyze the measurement in the left view image
+
+	depth_measurement.initial[0] += int(bline)
+	depth_measurement.final[0] += int(bline)
+
+	coordinates.append(depth_measurement.initial)
+	coordinates.append(depth_measurement.final)
+
+	height_measurement = Capture_Click()
+	cv.namedWindow('Morpheus (right view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (right view)', (539, 431))
+
+	cv.imshow('Morpheus (right view)', image)
+	print('\n\n\t\tMeasuring your image\'s height!', flush=True)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image height!', flush=True)
+	cv.setMouseCallback('Morpheus (right view)', height_measurement.click)
+
+	while(1):
+	    cv.imshow('Morpheus (right view)', image)
+	    k = cv.waitKey(20) & 0xFF
+	    if k == 27:
+	        break
+	cv.destroyAllWindows()
+
+	height_measurement.initial[0] += int(bline)
+	height_measurement.final[0] += int(bline)
+
+	coordinates.append(height_measurement.initial)
+	coordinates.append(height_measurement.final)
+
+	return coordinates
+
+def frontal_measurement(image):
+	# Shows the user a (different) rectified view of toy Morpheus sitting in a chair,
+	# still looking scary and misterious, and asks for two clicks to measure
+	# the object's width.
+
+	coordinates = []
+
+	width_measurement = Capture_Click()
+	cv.namedWindow('Morpheus (left view)', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Morpheus (left view)', (539, 431))
+	cv.imshow('Morpheus (left view)', image)
+
+	print('\n\n\t\tMeasuring your image\'s width!', flush=True)
+	print('Left click to set your starting coordinates and right click to set the end coordinates for your image depth!', flush=True)
+	cv.setMouseCallback('Morpheus (left view)', width_measurement.click)
+
+	while(1):
+	    cv.imshow('Morpheus (left view)', image)
+	    k = cv.waitKey(20) & 0xFF
+	    if k == 27:
+	        break
+	cv.destroyAllWindows()
+
+	coordinates.append(width_measurement.initial)
+	coordinates.append(width_measurement.final)
+
+	return coordinates
+
+def common_origin(points):
+# Function to re-organize object measurements so all three lines
+# come from a single origin, intentionally set right behind Morpheus' chair
+
+	origin = (890, 790)
+	h = abs(points[1][1] - points[1][3])
+	w = abs(points[2][0] - points[2][2])
+
+	x_d = abs(points[0][0] - points[0][2])
+	y_d = abs(points[0][1] - points[0][3])
+
+	# The first three sets of coordinates create lines for the three axii of the system,
+	# all coming from the origin. The remaining coordinate sets create the remaining outlines
+	# for the box.
+	complete_box = np.array([[origin[0], origin[1], (origin[0] - x_d), (origin[1] + y_d)],
+							[origin[0], origin[1], origin[0], (origin[1] - h)],
+							[origin[0], origin[1], (origin[0] - w), origin[1]],
+							[origin[0], (origin[1] - h), (origin[0] - w), (origin[1] - h)],
+							[(origin[0] - w), origin[1], (origin[0] - w), (origin[1] - h)],
+							[(origin[0] - w), origin[1], (origin[0] - (x_d + w)), (origin[1] + y_d)],
+							[origin[0], (origin[1] - h), (origin[0] - x_d), ((origin[1] + y_d) - h)],
+							[(origin[0] - w), (origin[1] - h), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
+							[(origin[0] - x_d), (origin[1] + y_d), (origin[0] - x_d), ((origin[1] + y_d) - h)],
+							[(origin[0] - (x_d + w)), (origin[1] + y_d), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
+							[(origin[0] - x_d), ((origin[1] + y_d) - h), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
+							[(origin[0] - x_d), (origin[1] + y_d), (origin[0] - (x_d + w)), (origin[1] + y_d)]])
+
+	return complete_box
+
+def show_clicks(imageL, imageR, points):
+# Function to show in an image the user's clicks and subsequent measurements
+
+	green = (0, 255, 0)
+	j = 0
+
+	print('From click coordinates, it is possible to show the measurements as a box around the object, as presented in the "Box outline" window')
+	reorganized_points = common_origin(points)
+
+	# Draw a box enveloping the entire object based on user measurements
+	while j < len(reorganized_points):
+		start = (reorganized_points[j][0], reorganized_points[j][1])
+		end = (reorganized_points[j][2], reorganized_points[j][3])
+
+		cv.line(imageR, start, end, green, 2)
+
+		j += 1
+
+	show_image(imageR, 539, 431, 'Box outline')
+
 def data_reader(file_name):
-# Função para leitura de dados de calibração em arquivo .txt
+# Function to acquire information from .txt files about calibrated cameras
 
 	lines = []
 	data = []
 
 	with open(file_name) as f:
-		lines = f.readlines()  # Armazenar linhas do arquivo em lista
+		lines = f.readlines()  # Store all lines in a list
 
-	# Percorrer linhas separando termos relevantes para inserir na lista
+	# Search list line by line, separating relevant data from irrelevant characters
 	for i in range(len(lines)):
 
 		clean_line = lines[i].replace('=', ' ').replace('[', '').replace(';', '').replace(']', '').replace(',', '')
 		str_results = clean_line.split()
 
 		for j in range(len(str_results)):
-
+			
 			try : 
 				float(str_results[j])
 				data.append(float(str_results[j]))
@@ -64,28 +208,51 @@ def data_reader(file_name):
 	
 	return data
 
-def world_coordinates (img, calib_data):
-# Função que utiliza dados de calibração das câmeras utilizadas para obter coordenadas 
-# 3D dos pontos no espaço
+def factorize_projection(matrixP_L, matrixP_R):
+# Function that factorize a projective matrix as P = K[R|t]
+	Q_L = np.linalg.inv(matrixP_L[0:3, 0:3])
+	Q_R = np.linalg.inv(matrixP_R[0:3, 0:3])
 
-	f = calib_data[0]
-	cx = calib_data[2]
-	cy = calib_data[5]
-	bline =calib_data[19]
-	doff = calib_data[18]
+	U_L, B_L = np.linalg.qr(Q_L)
+	U_R, B_R = np.linalg.qr(Q_R)
 
-	Q = np.float32([[1, 0, 0, -cx],
-                    [0, 1, 0, -cy],
-                    [0, 0, 0, f], 
-                    [0, 0, -1/bline, doff/bline]])
+	matR_L = np.linalg.inv(U_L)
+	vect_L = np.matmul(B_L, matrixP_L[0:3, 3])
+	matK_L = np.linalg.inv(B_L)
+	matK_L = matK_L/matK_L[2, 2]
 
-	# Utilizamos a matriz Q para realizar uma reprojeção, convertendo pixels com
-	# valor de disparidade na sua sequência correspondente de coordenadas [x, y, z]
-	world_coordinates = cv.reprojectImageTo3D(img, Q)
+	matR_R = np.linalg.inv(U_R)
+	vect_R = np.matmul(B_R, matrixP_R[0:3, 3])
+	matK_R = np.linalg.inv(B_R)
+	matK_R = matK_R/matK_R[2, 2]
+
+	return matK_L, matK_R
+
+def world_coordinates (left_img, base_line, matrixP_L, matrixP_R):
+# Function that applies calibration data to rectified images alongside 
+# openCV's reprojectImageTo3D to find [x, y, z] world coordinates
+
+	calib_dataL, calib_dataR = factorize_projection(matrixP_L, matrixP_R)
+	
+	f = (calib_dataL[0][0] + calib_dataL[1][1])/2
+	cx0 = calib_dataL[0][2]
+	cy0 = calib_dataL[1][2]
+	cx1 = calib_dataR[0][2]
+	doff = abs(cx1 - cx0)
+	bline = float(base_line)
+
+	Q = np.float32([[1, 0, 0, -cx0],
+					[0, 1, 0, -cy0],
+					[0, 0, 0, f], 
+					[0, 0, -1/bline, doff/bline]])
+
+	world_coordinate_map = cv.reprojectImageTo3D(left_img, Q)
+
+	return world_coordinate_map
 
 def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
-# Produz um mapa de profundidade, originalmente em milímetros mas normalizado para a escala 0 - 254 em preto e branco
-# para os objetos na imagem
+# Function to create a depth map, originally in millimeters but normalized to a
+# 0 - 254 black and white scale
 
 	f = focal
 	bline = base_line
@@ -95,27 +262,37 @@ def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
 	Z = bline * f / (img + doff)
 
 	if req != 3:
+		# The depth image is presented for requirement 2 with normalized values for visualization
 		filtered_depth_image = cv.normalize(src=Z, dst=Z, beta=0, alpha=254, norm_type=cv.NORM_MINMAX, dtype=cv.CV_8U)
 		filtered_depth_image[filtered_depth_image == 0] = 255
 		show_image(filtered_depth_image, 439, 331, 'depth_map')
 		cv.imwrite(save_dir, filtered_depth_image)
+	
 	else:
+	# For requirement 3 the depth map is provided with its original values in millimeters 
 		return filtered_depth_image
-	# Podemos mapear os valores da imagem de profundidade de volta para unidades em milímetros
-	# por um simples ajuste de escala:
-	# original = np.array((filtered_depth_image - minimo) / float(maximo))
-	#return filtered_depth_image
+
+def box_size(P, real_world_coordinates):
+# Each element in the world coordinates matrix has values x, y and z.	
+
+	real_depth = np.linalg.norm(real_world_coordinates[P[0][0]][P[0][1]] - real_world_coordinates[P[0][2]][P[0][3]])
+	y_height = abs(real_world_coordinates[P[1][0]][P[1][1]][1] - real_world_coordinates[P[1][2]][P[1][3]][1])
+	x_width = abs(real_world_coordinates[P[2][0]][P[2][1]][0] - real_world_coordinates[P[2][2]][P[2][3]][0])
+
+	print('\nLooking at X, Y and Z values, this estimates the object\'s depth at:', real_depth, 'millimeters.')
+	print('\nLooking solely at Y values, this estimates the object\'s height at:', y_height, 'millimeters.\n')
+	print('Looking solely at X values, this estimates the object\'s width at:', x_width, 'millimeters.\n')
 
 def disparity_calculator(left_image, right_image, min_num, max_num, block, req, save_dir):
-# Função que calcula mapa de disparidades dadas duas imagens estereo-retificadas
+# Function that takes a set of two stereo-rectified images to create a disparity map
 
 	left_matcher = cv.StereoSGBM_create(
 	    minDisparity = min_num,
-	    numDisparities = 16*(max_num//16), # Numero maximo de disparidades
+	    numDisparities = 16*(max_num//16), # Maximum number of disparities 
 	    blockSize = block,
 	    P1 = 8*3*block,
 	    P2 = 32*3*block,
-	    disp12MaxDiff = -1, # Desabilitado 
+	    disp12MaxDiff = -1, # Deactivated
 	    uniquenessRatio = 10,
 	    speckleWindowSize = 50,
 	    speckleRange = 32,
@@ -124,7 +301,7 @@ def disparity_calculator(left_image, right_image, min_num, max_num, block, req, 
 	)
 	right_matcher = cv.ximgproc.createRightMatcher(left_matcher)
 
-	# parâmetros do filtro
+	# filter parameters
 	lmbda = 80000
 	sigma = 1.3
 	wls_filter = cv.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
@@ -154,33 +331,41 @@ def disparity_calculator(left_image, right_image, min_num, max_num, block, req, 
 	return filteredImg
 
 def intrinsic_matrix(calib):
-    K = np.zeros((3,3))
-    dist = np.zeros((1,5))
-    K = np.array([[calib[0], calib[4], calib[2]],
-    			 [0., calib[1], calib[3]],
+	K = np.zeros((3,3))
+	# dist = np.zeros((1,5))
+	K = np.array([[calib[0], calib[4], calib[2]],
+				 [0., calib[1], calib[3]],
 				 [0., 0., 1]])
-    dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
-    return K, dist
+
+	# If the calibration .txt file provided includes distortion coefficients,
+	# compute them as dist and return them beside matrix K
+	# dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
+
+	return K
 
 def extrinsic_parameters(calib):
-    r_vec = np.zeros((3,3))
-    t_vec = np.zeros((3,1))
-    r_vec = np.array([[calib[5], calib[6], calib[7]], 
-				     [calib[8], calib[9], calib[10]],
-		             [calib[11], calib[12], calib[13]]])
-    t_vec = np.array([[calib[14]],
-					 [calib[15]],	
-					 [calib[16]]])
-    
-    return r_vec, t_vec
+	r_vec = np.zeros((3,3))
+	t_vec = np.zeros((3,1))
+	r_vec = np.array([[calib[5], calib[6], calib[7]],
+					[calib[8], calib[9], calib[10]],
+					[calib[11], calib[12], calib[13]]])
+	t_vec = np.array([[calib[14]],
+					[calib[15]],
+					[calib[16]]])
+
+	return r_vec, t_vec
 
 def stereo_rectify(calibL, calibR, d1, d2):
 
 	# Calculate the instrinsic matrix
-	matrixK_L, distL = intrinsic_matrix(calibL)
-	matrixK_R, distR = intrinsic_matrix(calibR)
+	matrixK_L = intrinsic_matrix(calibL)
+	matrixK_R = intrinsic_matrix(calibR)
 
-	# Calculate the rotation and translation vector relative
+	# Distortion coefficients provided from extended FurukawaPonce data (google drive archive)
+	distL = np.array([[-0.125368], [-0.097388], [-0.003711], [-0.000161], [0.000000]])	
+	distR = np.array([[-0.106090], [-0.533543], [-0.005174], [0.000517], [0.000000]])
+
+	# Calculate the rotation and translation vectors
 	r_vecL, t_vecL = extrinsic_parameters(calibL)
 	r_vecR, t_vecR = extrinsic_parameters(calibR)
 	
@@ -223,7 +408,7 @@ def stereo_rectify(calibL, calibR, d1, d2):
 
 	return H1, H2, Pn1, Pn2, np.linalg.norm(v1)
 
-def warp_images(imgL, imgR, calibL, calibR):
+def warp_images(imgL, imgR, calibL, calibR, req):
 	d1 = [0, 0]
 	d2 = [0, 0]
 
@@ -246,9 +431,14 @@ def warp_images(imgL, imgR, calibL, calibR):
 	ret2 = ret2[134:1334, 0:1200]
 
 	concat = cv.hconcat([ret1, ret2])
-	show_image(concat, 1000, 400, 'rectified')
 
-	ret1 = cv.cvtColor(ret1, cv.COLOR_BGR2GRAY)
-	ret2 = cv.cvtColor(ret2, cv.COLOR_BGR2GRAY)
+	if req != 3:
+		show_image(concat, 1000, 400, 'rectified')
 
-	return ret1, ret2, baseline
+	gray_ret1 = cv.cvtColor(ret1, cv.COLOR_BGR2GRAY)
+	gray_ret2 = cv.cvtColor(ret2, cv.COLOR_BGR2GRAY)
+
+	if req == 3:
+		return ret1, ret2, baseline, matrixP_L, matrixP_R
+	else:
+		return gray_ret1, gray_ret2, baseline
