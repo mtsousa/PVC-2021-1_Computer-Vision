@@ -8,7 +8,7 @@
       3 - Minimum box: Determing the minimum box dimensions in which the object of requeriment 2 can fit.
 
 ### OpenCV version: 4.5.1
-### Python version: 3
+### Python 3
 
 ### Python modules used:
      - cv2 (contrib version) 
