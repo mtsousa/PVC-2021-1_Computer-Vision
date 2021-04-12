@@ -24,5 +24,8 @@
 - For Linux users:
 >python3 src/visao_stereo.py
 
-### Sample of the result for depth calculated
-![alttext](https://github.com/lthistle/genetic-image-triangulation/blob/master/demos/progress.png)
+### Sample of image in README
+![alt text](https://www.serpro.gov.br/menu/noticias/noticias-2020/o-que-eh-visao-computacional/imagem1artigo.png/@@images/eeb269b6-1014-4539-a03d-946d931d535f.png)
+
+### Other sample of image
+![alt text](data/FurukawaPonce/profundidade.png)
