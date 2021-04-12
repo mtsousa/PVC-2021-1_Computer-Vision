@@ -23,3 +23,6 @@
 >python src/visao_stereo.py
 - For Linux users:
 >python3 src/visao_stereo.py
+
+### Sample of the result for depth calculated
+![alttext](https://github.com/lthistle/genetic-image-triangulation/blob/master/demos/progress.png)
