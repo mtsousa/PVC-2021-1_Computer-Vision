@@ -8,7 +8,7 @@
       3 - Minimum box: Determing the minimum box dimensions in which the object of requeriment 2 can fit.
 
 ### OpenCV version: 4.5.1
-### Python version: 3.8.1
+### Python version: 3
 
 ### Python modules used:
      - cv2 (contrib version) 
@@ -20,12 +20,16 @@
 
 ### To evaluate the requeriments run the command:
 - For Windows users:
->python src/visao_stereo.py
+>python src/main.py
 - For Linux users:
->python3 src/visao_stereo.py
+>python3 src/main.py
 
-### Sample of image in README
-![alt text](https://www.serpro.gov.br/menu/noticias/noticias-2020/o-que-eh-visao-computacional/imagem1artigo.png/@@images/eeb269b6-1014-4539-a03d-946d931d535f.png)
+### To evaluate the results of Middlebury images run the command:
+>python f_aux/eval.py
 
-### Other sample of image
-![alt text](data/FurukawaPonce/profundidade.png)
+### To read .pfm file and extract the ground truth run the command:
+>python f_aux/middle.py
+
+### Results of depth map calculated for Middlebury images
+![alt text](data/Middlebury/Jadeplant-perfect/profundidade.png)
+![alt text](data/Middlebury/Playtable-perfect/profundidade.png)

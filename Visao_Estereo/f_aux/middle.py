@@ -1,3 +1,5 @@
+# This code adapted from https://blog.csdn.net/weixin_44899143/article/details/89186891
+
 from pathlib import Path
 import numpy as np
 import csv
@@ -34,13 +36,10 @@ def read_pfm(pfm_file_path, base_new):
             endian = '>' # big endian
 
         dispariy = np.fromfile(pfm_file, endian + 'f')
-    #
 
-    # Eu mexi daqui
     img = np.reshape(dispariy, newshape=(height, width, channels))
     img[img==np.inf] = 0
     img = np.flipud(img)
-    #
 
     matrix_gt = cv2.normalize(img, None, 0, 1, cv2.NORM_MINMAX, cv2.CV_32F)
     np.save(os.path.join(base_new, 'gt_disparidade.npy'), matrix_gt)
@@ -88,6 +87,7 @@ def main():
     else:
 	    base_new = base.replace('/f_aux', '')
 
+    # Define vectors for images and their respective paths
     data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
 			    os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
     name = ['Jadeplant', 'Playtable']
@@ -99,6 +99,7 @@ def main():
         
         # calibration information
         calib = read_calib(calib_file_path)
+        
         # create depth map
         depth_map_left = create_depth_map(disp_left, data[i], calib)
         cv2.imwrite(os.path.join(data[i], 'gt_depth_map.jpg'), depth_map_left)
@@ -106,6 +107,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-#————————————————
-#版权声明：本文为CSDN博主「2h4dl」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
-#原文链接：https://blog.csdn.net/weixin_44899143/article/details/89186891

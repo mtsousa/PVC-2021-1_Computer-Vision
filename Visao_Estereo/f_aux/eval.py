@@ -1,9 +1,12 @@
+# Autores: Matheus Teixeira de Sousa (teixeira.sousa@aluno.unb.br)
+#          João Luiz Machado Júnior (180137158@aluno.unb.br)
+# Disciplina: Princípios de Visão Computacional - turma A
+
 import cv2 as cv
 import numpy as np
 import os.path
-import matplotlib.pyplot as plt
 
-def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp):
+def evaldisp(disparity, gtdisp, badthresh):
 
 	gt_shape = gtdisp.shape
 	disp_shape = disparity.shape
@@ -25,34 +28,15 @@ def evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp):
 	bad = 0
 	invalid = 0
 	serr = 0.0
-	#print(disparity)
-	#print(gtdisp)
-	if np.any(gtdisp[gtdisp == 0]):
-		print('Tem zero')
+
 	for y in range(height):
 		for x in range(width):
 			gt = gtdisp[x, y]
-
-			if (gt == np.inf):
-				print('Eh infinito')
-
+			
 			d = float(scale * disparity[int(x/scale), int(y/scale)])
-			if d == np.inf:
-				print('Eh infinito')
-			valid = (d != 0)#np.inf)
+			valid = (d != 0)
 			if not valid:
 				invalid += 1
-
-			if d > maxdisp:
-				print('Eh maior')
-
-			if (valid):
-				maxd = scale * maxdisp
-				d = max(0, min(maxd, d))
-				
-			if (valid and rounddisp):
-				print('Entrei')
-				d = round(d)
 
 			err = abs(d-gt)
 			n += 1
@@ -78,7 +62,7 @@ if os.name == 'nt':
 else:
 	base_new = base.replace('/f_aux', '')
 
-# Define os vetores das imagens e dos caminhos para as imagens
+# Define vectors for images and their respective paths
 images = ['disparidade.npy', 'gt_disparidade.npy']
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
 		os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
@@ -88,22 +72,22 @@ for i in range(len(name)):
 	disparity = np.load(os.path.join(data[i], images[0]))*100
 	gtdisp = np.load(os.path.join(data[i], images[1]))*100
 
-	#mask_resize = cv.resize(mask, (disparity.shape[1], disparity.shape[0]), interpolation = cv.INTER_LANCZOS4)
+	# Normalize data to show as an image
+	img_d = cv.normalize(disparity, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
+	img_gt = cv.normalize(gtdisp, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
 
-	cv.namedWindow('Disparidade calculada', cv.WINDOW_NORMAL)
-	cv.resizeWindow('Disparidade calculada', (439, 331))
-	cv.imshow('Disparidade calculada', disparity)
+	cv.namedWindow('Disparity map', cv.WINDOW_NORMAL)
+	cv.resizeWindow('Disparity map', (439, 331))
+	cv.imshow('Disparity map', img_d)
 
-	cv.namedWindow('GroundTruth disponibilizado', cv.WINDOW_NORMAL)
-	cv.resizeWindow('GroundTruth disponibilizado', (439, 331))
-	cv.imshow('GroundTruth disponibilizado', gtdisp)
+	cv.namedWindow('GroundTruth', cv.WINDOW_NORMAL)
+	cv.resizeWindow('GroundTruth', (439, 331))
+	cv.imshow('GroundTruth', img_gt)
 
 	cv.waitKey(0)
 	cv.destroyAllWindows()
 
 	badthresh = 2
-	maxdisp = 1988 / 3
-	rounddisp = 0
 
 	print('Calculating error to ' + name[i] + ' results...\n', flush=True)
-	evaldisp(disparity, gtdisp, badthresh, maxdisp, rounddisp)
+	evaldisp(disparity, gtdisp, badthresh)
