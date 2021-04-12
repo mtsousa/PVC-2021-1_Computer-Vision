@@ -15,7 +15,8 @@ else:
 # Define o vetor da imagem e dos caminhos para a imagem
 image = 'disparidade.pgm'
 data = [os.path.join(base_new, 'data', 'Middlebury', 'Jadeplant-perfect'),
-        os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect')]
+        os.path.join(base_new, 'data', 'Middlebury', 'Playtable-perfect'),
+          os.path.join(base_new, 'data', 'FurukawaPonce')]
 
 for i in range(len(data)):
     img = cv.imread(os.path.join(data[i], image), cv.IMREAD_UNCHANGED)
@@ -24,4 +25,5 @@ for i in range(len(data)):
     plt.imshow(img, cmap='jet')
     plt.colorbar()
     plt.axis('off')
+    #plt.savefig("disparidade.jpg")
     plt.show()
