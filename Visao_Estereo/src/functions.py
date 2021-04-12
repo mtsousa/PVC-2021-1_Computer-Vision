@@ -332,12 +332,16 @@ def disparity_calculator(left_image, right_image, min_num, max_num, block, req, 
 
 def intrinsic_matrix(calib):
 	K = np.zeros((3,3))
-	dist = np.zeros((1,5))
+	# dist = np.zeros((1,5))
 	K = np.array([[calib[0], calib[4], calib[2]],
 				 [0., calib[1], calib[3]],
 				 [0., 0., 1]])
-	dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
-	return K, dist
+
+	# If the calibration .txt file provided includes distortion coefficients,
+	# compute them as dist and return them beside matrix K
+	# dist = np.array([calib[17], calib[18], calib[19], calib[20], calib[21]])
+
+	return K
 
 def extrinsic_parameters(calib):
 	r_vec = np.zeros((3,3))
@@ -354,8 +358,12 @@ def extrinsic_parameters(calib):
 def stereo_rectify(calibL, calibR, d1, d2):
 
 	# Calculate the instrinsic matrix
-	matrixK_L, distL = intrinsic_matrix(calibL)
-	matrixK_R, distR = intrinsic_matrix(calibR)
+	matrixK_L = intrinsic_matrix(calibL)
+	matrixK_R = intrinsic_matrix(calibR)
+
+	# Distortion coefficients provided from extended FurukawaPonce data (google drive archive)
+	distL = np.array([[-0.125368], [-0.097388], [-0.003711], [-0.000161], [0.000000]])	
+	distR = np.array([[-0.106090], [-0.533543], [-0.005174], [0.000517], [0.000000]])
 
 	# Calculate the rotation and translation vectors
 	r_vecL, t_vecL = extrinsic_parameters(calibL)
