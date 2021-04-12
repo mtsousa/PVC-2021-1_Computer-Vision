@@ -166,28 +166,9 @@ def show_clicks(imageL, imageR, points):
 # Function to show in an image the user's clicks and subsequent measurements
 
 	green = (0, 255, 0)
-	i = 0
 	j = 0
 
-	# Draw lines in the image representing where the user clicked
-	while i < len(points):
-		start = (points[i][0], points[i][1])
-		end = (points[i][2], points[i][3])
-
-		cv.line(imageL, start, end, green, 2)
-
-		i += 1
-
-	cv.namedWindow('User clicks', cv.WINDOW_NORMAL)
-	cv.resizeWindow('User clicks', (539, 431))
-	
-	while(1):
-	    cv.imshow('User clicks', imageL)
-	    k = cv.waitKey(20) & 0xFF
-	    if k == 27:
-	        break
-	cv.destroyAllWindows()
-
+	print('From click coordinates, it is possible to show the measurements as a box around the object, as presented in the "Box outline" window')
 	reorganized_points = common_origin(points)
 
 	# Draw a box enveloping the entire object based on user measurements
@@ -199,16 +180,7 @@ def show_clicks(imageL, imageR, points):
 
 		j += 1
 
-	cv.namedWindow('Box outline', cv.WINDOW_NORMAL)
-	cv.resizeWindow('Box outline', (539, 431))
-	
-	while(1):
-		cv.imshow('Box outline', imageR)
-		k = cv.waitKey(20) & 0xFF
-		if k == 27:
-			break
-
-	cv.destroyAllWindows()
+	show_image(imageR, 539, 431, 'Box outline')
 
 def data_reader(file_name):
 # Function to acquire information from .txt files about calibrated cameras
