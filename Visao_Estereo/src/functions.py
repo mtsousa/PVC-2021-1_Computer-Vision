@@ -72,6 +72,9 @@ def lateral_measurements(image, bline):
 	        break
 	cv.destroyAllWindows()
 
+	# Using the provided baseline, we translate the user's click coordinates
+	# to analyze the measurement in the left view image
+
 	depth_measurement.initial[0] += int(bline)
 	depth_measurement.final[0] += int(bline)
 
@@ -141,15 +144,14 @@ def common_origin(points):
 	x_d = abs(points[0][0] - points[0][2])
 	y_d = abs(points[0][1] - points[0][3])
 
-	reorganized_points = np.array([[origin[0], origin[1], (origin[0] - x_d), (origin[1] + y_d)],
-									[origin[0], origin[1], origin[0], (origin[1] - h)],
-									[origin[0], origin[1], (origin[0] - w), origin[1]]])
-
-	complete_box = np.array([[origin[0], origin[1], (origin[0] - w), origin[1]],
-							[origin[0], (origin[1] - h), (origin[0] - w), (origin[1] - h)],
+	# The first three sets of coordinates create lines for the three axii of the system,
+	# all coming from the origin. The remaining coordinate sets create the remaining outlines
+	# for the box.
+	complete_box = np.array([[origin[0], origin[1], (origin[0] - x_d), (origin[1] + y_d)],
 							[origin[0], origin[1], origin[0], (origin[1] - h)],
+							[origin[0], origin[1], (origin[0] - w), origin[1]],
+							[origin[0], (origin[1] - h), (origin[0] - w), (origin[1] - h)],
 							[(origin[0] - w), origin[1], (origin[0] - w), (origin[1] - h)],
-							[origin[0], origin[1], (origin[0] - x_d), (origin[1] + y_d)],
 							[(origin[0] - w), origin[1], (origin[0] - (x_d + w)), (origin[1] + y_d)],
 							[origin[0], (origin[1] - h), (origin[0] - x_d), ((origin[1] + y_d) - h)],
 							[(origin[0] - w), (origin[1] - h), (origin[0] - (x_d + w)), ((origin[1] + y_d) - h)],
@@ -167,12 +169,11 @@ def show_clicks(imageL, imageR, points):
 	i = 0
 	j = 0
 
+	# Draw lines in the image representing where the user clicked
 	while i < len(points):
 		start = (points[i][0], points[i][1])
 		end = (points[i][2], points[i][3])
 
-		cv.circle(imageL, start, 3, green, -1)
-		cv.circle(imageL, end, 3, green, -1)
 		cv.line(imageL, start, end, green, 2)
 
 		i += 1
@@ -189,12 +190,11 @@ def show_clicks(imageL, imageR, points):
 
 	reorganized_points = common_origin(points)
 
+	# Draw a box enveloping the entire object based on user measurements
 	while j < len(reorganized_points):
 		start = (reorganized_points[j][0], reorganized_points[j][1])
 		end = (reorganized_points[j][2], reorganized_points[j][3])
 
-		cv.circle(imageR, start, 3, green, -1)
-		cv.circle(imageR, end, 3, green, -1)
 		cv.line(imageR, start, end, green, 2)
 
 		j += 1
@@ -279,7 +279,7 @@ def world_coordinates (left_img, base_line, matrixP_L, matrixP_R):
 	return world_coordinate_map
 
 def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
-# Function to create a depth map, originally in milimeters but normalized to a
+# Function to create a depth map, originally in millimeters but normalized to a
 # 0 - 254 black and white scale
 
 	f = focal
@@ -297,30 +297,19 @@ def image_depth (img, focal, base_line, center_l, center_r, req, save_dir):
 		cv.imwrite(save_dir, filtered_depth_image)
 	
 	else:
-	# For requirement 3 the depth map is provided with its original values in milimeters 
+	# For requirement 3 the depth map is provided with its original values in millimeters 
 		return filtered_depth_image
 
 def box_size(P, real_world_coordinates):
 # Each element in the world coordinates matrix has values x, y and z.	
 
 	real_depth = np.linalg.norm(real_world_coordinates[P[0][0]][P[0][1]] - real_world_coordinates[P[0][2]][P[0][3]])
-	z_depth = abs(real_world_coordinates[P[0][0]][P[0][1]][2] - real_world_coordinates[P[0][2]][P[0][3]][2])
-
-	real_height = np.linalg.norm(real_world_coordinates[P[1][0]][P[1][1]] - real_world_coordinates[P[1][2]][P[1][3]])
 	y_height = abs(real_world_coordinates[P[1][0]][P[1][1]][1] - real_world_coordinates[P[1][2]][P[1][3]][1])
-
-	real_width = np.linalg.norm(real_world_coordinates[P[2][0]][P[2][1]] - real_world_coordinates[P[2][2]][P[2][3]])
 	x_width = abs(real_world_coordinates[P[2][0]][P[2][1]][0] - real_world_coordinates[P[2][2]][P[2][3]][0])
 
-	print('\nLooking at X, Y and Z values, this estimates the object\'s depth at:', real_depth, 'milimeters.')
-	#print('Looking solely at Z values, this estimates the object\'s depth at:', z_depth, 'milimeters.\n')
-
-	#print('Looking at X, Y and Z values, this estimates the object\'s height at:', real_height, 'milimeters.\n')
-	print('\nLooking solely at Y values, this estimates the object\'s height at:', y_height, 'milimeters.\n')
-		
-	#print('\nLooking at X, Y and Z values, this estimates the object\'s width at:', real_width, 'milimeters.\n')
-	print('Looking solely at X values, this estimates the object\'s width at:', x_width, 'milimeters.\n')
-
+	print('\nLooking at X, Y and Z values, this estimates the object\'s depth at:', real_depth, 'millimeters.')
+	print('\nLooking solely at Y values, this estimates the object\'s height at:', y_height, 'millimeters.\n')
+	print('Looking solely at X values, this estimates the object\'s width at:', x_width, 'millimeters.\n')
 
 def disparity_calculator(left_image, right_image, min_num, max_num, block, req, save_dir):
 # Function that takes a set of two stereo-rectified images to create a disparity map
