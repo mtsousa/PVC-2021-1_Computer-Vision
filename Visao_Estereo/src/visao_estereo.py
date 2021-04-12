@@ -124,8 +124,8 @@ def third_requirement():
 	gray_left_img = cv.cvtColor(left_img, cv.COLOR_BGR2GRAY)
 	real_world_coordinates = 0.0239 * (f.world_coordinates(gray_left_img, base_line, matrixP_L, matrixP_R))
 
-	f.box_size(P, real_world_coordinates)
 	f.show_clicks(left_img, right_img, P)
+	f.box_size(P, real_world_coordinates)
 
 if __name__ == "__main__":
 	# Main menu for 
