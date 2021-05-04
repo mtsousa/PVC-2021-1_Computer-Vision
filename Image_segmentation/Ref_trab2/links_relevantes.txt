@@ -1,0 +1,9 @@
+https://towardsdatascience.com/understanding-and-coding-a-resnet-in-keras-446d7ff84d33
+
+https://medium.com/@14prakash/understanding-and-implementing-architectures-of-resnet-and-resnext-for-state-of-the-art-image-cf51669e1624
+
+https://www.immersivelimit.com/tutorials/create-coco-annotations-from-scratch/#previewing-coco-annotations
+
+https://github.com/KaimingHe/deep-residual-networks
+
+https://towardsdatascience.com/transfer-learning-from-pre-trained-models-f2393f124751
