@@ -20,6 +20,7 @@ import sys
 import time
 import numpy as np
 import imgaug  # https://github.com/aleju/imgaug (pip3 install imgaug)
+import matplotlib.pyplot as plt
 
 # Download and install the Python COCO tools from https://github.com/waleedka/coco
 # That's a fork from the original https://github.com/pdollar/coco with a bug
@@ -386,6 +387,37 @@ if __name__ == '__main__':
     # model.load_weights(model_path, by_name=True)
     model.load_weights(model_path, by_name=True, exclude=[ "mrcnn_class_logits", "mrcnn_bbox_fc", "mrcnn_bbox", "mrcnn_mask"])
 
+    class MyCallbacks(tf.keras.callbacks.Callback):
+        # Save accuracy and loss graphs
+        def on_train_end(self):
+            history = self.model.history
+            # summarize history for accuracy
+            plt.plot(history['accuracy'])
+            plt.plot(history['val_accuracy'])
+            plt.title('Model Accuracy')
+            plt.ylabel('Accuracy')
+            plt.xlabel('Epoch')
+            plt.legend(['train', 'test'], loc='upper left')
+            # plt.show()
+            plt.savefig('/content/drive/MyDrive/Image_segmentation/accuracy.jpg', format = 'jpg', dpi = 1200, bboxinches = 'tight')
+
+            # summarize history for loss
+            plt.plot(history['loss'])
+            plt.plot(history['val_loss'])
+            plt.title('Model Loss')
+            plt.ylabel('Loss')
+            plt.xlabel('Epoch')
+            plt.legend(['train', 'test'], loc='upper left')
+            # plt.show()
+            plt.savefig('/content/drive/MyDrive/Image_segmentation/loss.jpg', format = 'jpg', dpi = 1200, bboxinches = 'tight')
+
+        # Show accuray
+        def on_epoch_end(self, epoch, logs={}):
+            accuracy = logs.get('acc')
+            print('On epoch {}, the accuracy is {}.'.format(epoch, accuracy))
+
+    callback = [MyCallbacks()]
+
     # Train or evaluate
     if args.command == "train":
         # Training dataset. Use the training set and 35K from the
@@ -411,7 +443,8 @@ if __name__ == '__main__':
                     learning_rate=config.LEARNING_RATE,
                     epochs=1,
                     layers='heads',
-                    augmentation=augmentation)
+                    augmentation=augmentation,
+                    custom_callbacks=callback)
 
         # # Training - Stage 2
         # # Finetune layers from ResNet stage 4 and up

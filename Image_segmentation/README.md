@@ -28,3 +28,14 @@
 ### Results of image segmentation:
 ![alt text]()
 ![alt text]()
+
+### Fine-tuning configuration:
+
+|     Parameter     |               Configurations              |
+|:-----------------:|:-----------------------------------------:|
+|   Training mode   | Stochastic Gradient Descent with Momentum |
+|     Batch size    |                     2                     |
+|   Learning rate   |           [0.01, 0.001, 0.0001]*          |
+| Momentum learning |                    0.9                    |
+|       Epoch       |                [5, 10, 15]*               |
+|    Dataset size   |            [7000, 10500, 14000]*          |
