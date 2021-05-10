@@ -78,7 +78,7 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 ## Segmentation results
 
 ### Visual results
-![alt text](images/colagem_readme.jpg)
+![alt text](colagem_readme.jpg)
 
 ### Average precision
 
@@ -86,4 +86,4 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 |:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|
 |   0.320  |   0.341   |   0.342   |   0.343   |   0.343   |   0.354   |   0.342   |   0.351   |   0.347   |   0.363   |   0.367   |   0.359   |
 
-[3]: Our best result were **0.368** on 54th epoch.
+[3]: Our best result was **0.368** on 54th epoch.
