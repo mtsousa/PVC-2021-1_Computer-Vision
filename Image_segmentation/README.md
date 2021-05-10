@@ -61,7 +61,7 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 - For Linux users:
     >python3 src/train_model.py train --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
 
-### To evalute the model on MS COCO metric run the command:
+### To evaluate the model on MS COCO metric run the command:
 - For Windows users:
     >python src/train_model.py evaluate --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
 - For Linux users:
