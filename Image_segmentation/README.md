@@ -78,7 +78,7 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 ## Segmentation results
 
 ### Visual results
-![alt text](images/colagem_readme.jpg)
+![alt text](images/colagem_readme.png)
 
 ### Average precision
 
