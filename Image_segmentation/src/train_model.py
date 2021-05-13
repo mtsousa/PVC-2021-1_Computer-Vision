@@ -385,9 +385,8 @@ if __name__ == '__main__':
 
         # Data augmentation
         # Make vertical flip, horizontal filp or rotation
-        # but flip or rotate about 50% of all images
-        # augmentation = imgaug.augmenters.Fliplr(0.5)
-        augmentation = imgaug.augmenters.Sometimes(0.5, imgaug.augmenters.OneOf([imgaug.augmenters.Fliplr(0.5),
+        # but flip or rotate about 70% of all images
+        augmentation = imgaug.augmenters.Sometimes(0.7, imgaug.augmenters.OneOf([imgaug.augmenters.Fliplr(0.5),
                                                                          imgaug.augmenters.Flipud(0.5),
                                                                          imgaug.augmenters.Affine(rotate=45)]))
 
@@ -405,9 +404,10 @@ if __name__ == '__main__':
         coco = dataset_val.load_coco(args.dataset, args.annotations, "val", return_coco=True)
         dataset_val.prepare()
 
-        # Run the evaluation
+        # Run the evaluation for bounding box and segmentation
         print("Running COCO evaluation on {} images.".format(args.limit))
         evaluate_coco(model, dataset_val, coco, "bbox", limit=int(args.limit))
+        evaluate_coco(model, dataset_val, coco, "segm", limit=int(args.limit))
     
     else:
         print("'{}' is not recognized. "

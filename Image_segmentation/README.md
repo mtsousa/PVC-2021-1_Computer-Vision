@@ -31,7 +31,10 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
     - pycocotools
 
 ### To install all modules run the command:
->pip install -r requirements.txt
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage 
 
@@ -39,41 +42,54 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 * This model was trained on Google Colab, which has 12GB of RAM memory available, NVIDIA Tesla T4 GPU, and 30GB of disk memory;
 * The [pre-trained weights](https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5) used were trained on MS COCO dataset;
 * This model detect and segment **7 categories** of the original MS COCO dataset: person, dog, car, motorcycle, bicycle, bus, and truck;
-* The dataset used had 7000 images for training, **1000 images for each category**, and 500 images for validation from 1 to 40 epochs and 10500 images for training, **1500 images for each category**, and 3056 images for validation for more 20 epochs;
-* Each epoch has 1000 iterations and the learning rate was 0.001 for all epochs;
-* Were applied data augmentation via horizontal flip, vertical flip, and rotation for 50% of images.
+* The dataset used had 10500 images for training, **1500 images for each category**, and 3056 images for validation;
+* The model was trained during 60 epochs;
+* Each epoch has 1000 iterations and the learning rate was 0.001 for all the epochs;
+* Were applied data augmentation via horizontal flip, vertical flip, and rotation for 70% of images per epoch.
 
-### To download the images to training run the command [1]:
+### To download the images to training run the command:
 - For Windows users:
-    >python f_aux/save_images.py train
-
-    >python f_aux/save_images.py val
+    ```bash
+    python f_aux/save_images.py train
+    python f_aux/save_images.py val
+    ```
 - For Linux users:
-    >python3 f_aux/save_images.py train
-
-    >python3 f_aux/save_images.py val
-
-[1]: It will download 10500 images for training and 3056 images for validation. The annotations file to train and to evaluate will be download automatically after run one of those commands. 
+    ```bash
+    python3 f_aux/save_images.py train
+    python3 f_aux/save_images.py val
+    ```
 
 ### To train the model run the command:
 - For Windows users:
-    >python src/train_model.py train --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```bash
+    python src/train_model.py train --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```
 - For Linux users:
-    >python3 src/train_model.py train --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```bash
+    python3 src/train_model.py train --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```
 
 ### To evaluate the model on MS COCO metric run the command:
 - For Windows users:
-    >python src/train_model.py evaluate --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```bash
+    python src/train_model.py evaluate --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```
 - For Linux users:
-    >python3 src/train_model.py evaluate --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```bash
+    python3 src/train_model.py evaluate --dataset=path/to/images --annotations=path/to/annotations --classes=7 --model=path/to/model
+    ```
 
-### To apply inference mode run the command [2]:
+### To apply inference mode run the command [1]:
 - For Windows users:
->python src/main.py --image=path/to/image.jpg
+    ```bash
+    python src/main.py --image=path/to/image.jpg
+    ```
 - For Linux users:
->python3 src/main.py --image=path/to/image.jpg
+    ```bash
+    python3 src/main.py --image=path/to/image.jpg
+    ```    
 
-[2]: The model weights will be download automatically after run this command.
+[1]: The model weights will be download automatically after run this command.
 
 ## Segmentation results
 
@@ -82,8 +98,6 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 
 ### Average precision
 
-| 5 epochs | 10 epochs | 15 epochs | 20 epochs | 25 epochs | 30 epochs | 35 epochs | 40 epochs | 45 epochs | 50 epochs | 55 epochs[3] | 60 epochs |
-|:--------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|:---------:|
-|   0.320  |   0.341   |   0.342   |   0.343   |   0.343   |   0.354   |   0.342   |   0.351   |   0.347   |   0.363   |   0.367   |   0.359   |
-
-[3]: Our best result was **0.368** on 54th epoch.
+| AP_bbox  | AP_segm  |
+|:--------:|:--------:|
+|   0.370  |  0.337   |

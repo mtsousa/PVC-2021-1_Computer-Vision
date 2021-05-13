@@ -44,15 +44,15 @@ IMAGE_DIR = args.image
 config = InferenceConfig()
 model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
-# Load weights trained on MS-COCO
-model_path = 'src/model/mask_rcnn_pvc_net_0054.h5'
-MODEL_URL = 'https://github.com/mtsousa/Visao_Computacional/releases/download/v1_MyModel/mask_rcnn_pvc_net_0054.h5'
+model_path = 'src/model/mask_rcnn_pvc_net_0050.h5'
+MODEL_URL = 'https://github.com/mtsousa/Visao_Computacional/releases/download/v2_MyModel/mask_rcnn_pvc_net_0050.h5'
 
 # Download weights if does not exists
 if not os.path.exists(model_path):
     print('Donwloading model...')
     with urllib.request.urlopen(MODEL_URL) as resp, open(model_path, 'wb') as out:
         shutil.copyfileobj(resp, out)
+# Load weights
 model.load_weights(model_path, by_name=True)
 
 class_names = ['BG', 'person', 'bicycle', 'car', 'motorcycle', 'bus', 'truck', 'dog']
