@@ -41,7 +41,7 @@ pip install -r requirements.txt
 ### Training detail:
 * This model was trained on Google Colab, which has 12GB of RAM memory available, NVIDIA Tesla T4 GPU, and 30GB of disk memory;
 * The [pre-trained weights](https://github.com/matterport/Mask_RCNN/releases/download/v2.0/mask_rcnn_coco.h5) used were trained on MS COCO dataset;
-* This model detect and segment **7 categories** of the original MS COCO dataset: person, dog, car, motorcycle, bicycle, bus, and truck;
+* This model detects and segments **7 categories** of the original MS COCO dataset: person, dog, car, motorcycle, bicycle, bus, and truck;
 * The dataset used had 10500 images for training, **1500 images for each category**, and 3056 images for validation;
 * The model was trained during 60 epochs;
 * Each epoch has 1000 iterations and the learning rate was 0.001 for all the epochs;
