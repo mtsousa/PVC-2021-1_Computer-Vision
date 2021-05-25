@@ -1,19 +1,22 @@
 # Multi-label classification
 
-Multi-label classification using viola and fastai.
+* Multi-label classification using fastai
+* To train the model use [training notebook](mult_classification_training.ipynb)
+* To classify an image use the [classifier notebook](mult_classification_classifier.ipynb)
 
-### Python 3
-### Fastai version: 
-
-### Python modules used:
-     - fastai.widget 
-     - viola  
-     - fastai.vision
+## Setup
+* Trained on Google Colab
+* Python 3
+* Fastai version: 2.3.1
 
 ### Categories for classification:
             
-| aeroplane |   bicycle   |  bird |    boat   |   bottle   |
-|:---------:|:-----------:|:-----:|:---------:|:----------:|
-|    bus    |     car     |  cat  |   chair   |    cow     |
-|   sheep   |     dog     | horse | motorbike |   person   |
-|   sofa    | pottedplant | train | tvmonitor | dinigtable |
+|  Vehicles | Animals |   Objects   |
+|:---------:|:-------:|:-----------:|
+| aeroplane |   bird  |    chair    |
+|  bicycle  |   cat   |     sofa    |
+|    boat   |   cow   | pottedplant |
+|    bus    |  sheep  |  tvmonitor  |
+|    car    |   dog   |  dinigtable |
+| motorbike |  horse  |    bottle   |
+|   train   |  person |      -      |

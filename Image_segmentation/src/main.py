@@ -9,6 +9,7 @@ import matplotlib
 import urllib.request
 import shutil
 import os
+import tensorflow as tf
 
 # Import Mask RCNN
 from mrcnn.config import Config
@@ -42,7 +43,9 @@ IMAGE_DIR = args.image
 
 # Create model object in inference mode
 config = InferenceConfig()
-model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
+DEVICE = "/cpu:0"
+with tf.device(DEVICE):
+        model = modellib.MaskRCNN(mode="inference", model_dir=MODEL_DIR, config=config)
 
 model_path = 'src/model/mask_rcnn_pvc_net_0050.h5'
 MODEL_URL = 'https://github.com/mtsousa/Visao_Computacional/releases/download/v2_MyModel/mask_rcnn_pvc_net_0050.h5'
