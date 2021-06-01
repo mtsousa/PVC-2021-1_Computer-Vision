@@ -6,7 +6,7 @@
 
 ## Setup
 * Trained on Google Colab
-* Python 3
+* Python 3.7
 * Fastai version: 2.3.1
 
 ### Categories for classification:

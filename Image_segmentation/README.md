@@ -8,7 +8,7 @@ This is an implementation of [Mask R-CNN](https://arxiv.org/abs/1703.06870) on P
 
 ## Setup the Environment
 
-    - Python 3
+    - Python 3.7
     - Tensorflow version: 1.15.0
     - Keras version: 2.1.0
 

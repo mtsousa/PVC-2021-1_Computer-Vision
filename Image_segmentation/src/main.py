@@ -5,7 +5,6 @@
 
 import cv2 as cv
 import argparse
-import matplotlib
 import urllib.request
 import shutil
 import os
@@ -16,7 +15,6 @@ from mrcnn.config import Config
 from mrcnn import utils
 import mrcnn.model as modellib
 from mrcnn import visualize
-import matplotlib.pyplot as plt
 
 class InferenceConfig(Config):
     # Set batch size to 1 since we'll be running inference on
