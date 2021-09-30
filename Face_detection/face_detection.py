@@ -128,7 +128,7 @@ faces, labels = prepare_training_data()
 # Create the LBPH face recognizer 
 face_recognizer = cv2.face.LBPHFaceRecognizer_create()
 
-# Train the face recognizer
+# Training the face recognizer
 face_recognizer.train(faces, np.array(labels))
 
 # Define the type of evaluation
