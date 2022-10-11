@@ -20,7 +20,7 @@ def measure_height(focalLength, distance_know, height_px):
 # Lê o arquivo de calibração gerado pelo programa calibra.py
 # e retorna a média entre as distâncias focais f_x e f_y
 def focal_length():
-    ref_arquivo = open('dados_câmera.txt', 'r')
+    ref_arquivo = open('dados_camera.txt', 'r')
     linha = ref_arquivo.readline()
     for i in range(2):
         linha = ref_arquivo.readline()

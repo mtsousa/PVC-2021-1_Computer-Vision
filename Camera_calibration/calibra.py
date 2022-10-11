@@ -80,6 +80,6 @@ matrix_ext = np.column_stack((matrix_r, t_vect[0]))
 matrix_p = np.matmul(matrix_k, matrix_ext)
 
 # Cria e escreve o arquivo com os parâmetros obtidos
-arquivo = open('dados_câmera.txt', 'w')
+arquivo = open('dados_camera.txt', 'w')
 escreve_arquivo(arquivo, matrix_p, matrix_k, matrix_r, t_vect[0], distortion)
 arquivo.close()
