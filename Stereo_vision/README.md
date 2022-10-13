@@ -66,6 +66,7 @@ python f_aux/middle.py
 
 ### Depth map calculated for Middlebury images
 
-![alt text](data/Middlebury/Jadeplant-perfect/profundidade.png)
-
-![alt text](data/Middlebury/Playtable-perfect/profundidade.png)
+| Original | Depth map |
+|:--------:|:---------:|
+| ![](data/Middlebury/Jadeplant-perfect/im0.png) | ![](data/Middlebury/Jadeplant-perfect/profundidade.png) |
+| ![](data/Middlebury/Playtable-perfect/im0.png) | ![](data/Middlebury/Playtable-perfect/profundidade.png)
