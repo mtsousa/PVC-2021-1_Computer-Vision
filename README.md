@@ -1,6 +1,6 @@
 # PVC-2021-1_Computer-Vision
 
-![](https://img.shields.io/badge/version-0.2-green)
+![](https://img.shields.io/badge/version-v0.2-blue)
 ![](https://img.shields.io/badge/Python-3670A0?logo=python&logoColor=ffdd54)
 ![](https://img.shields.io/badge/-OpenCV-38B000?logo=opencv)
 
